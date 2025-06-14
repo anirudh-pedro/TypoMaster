@@ -1,28 +1,22 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Nav from '../components/Nav';
+import { useNavigate,Link } from 'react-router-dom';
+import Nav, { getNavProfileImage } from '../components/Nav'; // Import the helper function
+import { AppContext } from '../App';
 import { 
   FaKeyboard, FaTrophy, FaChartLine, FaCalendarAlt, 
   FaFire, FaArrowUp, FaArrowDown, FaInfoCircle, 
   FaHistory, FaChartBar, FaUserAlt, FaRegLightbulb,
   FaSignOutAlt, FaCog
 } from 'react-icons/fa';
-import { AppContext } from '../App';
 
 // Chart components - you'll need to install: npm install recharts
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const Dashboard = ({ user: propUser, logout: propLogout }) => {
+const Dashboard = () => {
   const navigate = useNavigate();
   
-  // Use context if available
-  const context = useContext(AppContext) || {};
-  const contextUser = context.user;
-  const contextLogout = context.logout;
-  
-  // Use props if provided, otherwise use context
-  const user = propUser || contextUser;
-  const logout = propLogout || contextLogout;
+  // Use context for user and logout
+  const { user, logout } = useContext(AppContext) || {};
   
   // Define activeTab state first
   const [activeTab, setActiveTab] = useState('overview');
@@ -234,48 +228,74 @@ const Dashboard = ({ user: propUser, logout: propLogout }) => {
     return 'U';
   };
   
+  // In Dashboard.jsx, enhance loading state
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
       </div>
     );
   }
   
+  // Use the same profile image function that Nav uses to ensure consistency
+  const getProfileImageUrl = () => {
+    return getNavProfileImage(user);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Nav user={user} logout={logout} />
+      <Nav />
       
       <div className="max-w-7xl mx-auto pt-20 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                {user.picture ? (
-                  <img 
-                    className="h-16 w-16 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800" 
-                    src={user.picture} 
-                    alt={user.name || 'User profile'} 
-                    onError={(e) => {
-                      e.target.onerror = null; // Prevent infinite loop
-                      e.target.style.display = 'none'; // Hide the img element
-                      e.target.nextSibling.style.display = 'flex'; // Show the fallback
-                    }}
-                  />
-                ) : null}
+                {/* Enhanced profile image handling */}
+                {(() => {
+                  const profileImageUrl = getProfileImageUrl();
+                  
+                  if (profileImageUrl) {
+                    return (
+                      <img 
+                        className="h-16 w-16 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 shadow-lg" 
+                        src={profileImageUrl} 
+                        alt={user.name || 'User profile'} 
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          console.log('Dashboard image failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    );
+                  }
+                  
+                  return null;
+                })()}
+                
+                {/* Fallback avatar */}
                 <div 
-                  className={`h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-2xl text-indigo-600 dark:text-indigo-400 font-bold ${user.picture ? 'hidden' : 'flex'}`}
+                  className={`h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-2xl text-indigo-600 dark:text-indigo-400 font-bold border-2 border-indigo-200 dark:border-indigo-800 shadow-lg ${(() => {
+                    const imageUrl = user?.picture || user?.photoURL || user?.avatar || user?.profilePicture || user?.image;
+                    return imageUrl ? 'hidden' : 'flex';
+                  })()}`}
                 >
                   {getUserInitials()}
                 </div>
               </div>
               <div className="ml-4">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Welcome, {user.name || user.email?.split('@')[0] || 'User'}!
+                  Welcome, {user.name || user.displayName || user.email?.split('@')[0] || 'User'}!
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
                   Track your typing progress and statistics
                 </p>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {user.email}
+                </div>
               </div>
             </div>
             

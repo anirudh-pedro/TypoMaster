@@ -72,10 +72,13 @@ export const localAuth = {
     return {
       uid: firebaseUser?.uid || `guest_${Date.now()}`,
       email: firebaseUser?.email || 'guest@typomaster.com',
-      name: firebaseUser?.displayName || 'Guest User',
-      picture: firebaseUser?.photoURL || null,
+      name: firebaseUser?.name || firebaseUser?.displayName || 'Guest User',
+      displayName: firebaseUser?.displayName || firebaseUser?.name || 'Guest User',
+      picture: firebaseUser?.picture || firebaseUser?.photoURL || null,
+      photoURL: firebaseUser?.photoURL || firebaseUser?.picture || null,
+      avatar: firebaseUser?.photoURL || firebaseUser?.picture || null,
       isGuestMode: true,
-      provider: 'guest',
+      provider: 'google',
       createdAt: new Date().toISOString()
     };
   }

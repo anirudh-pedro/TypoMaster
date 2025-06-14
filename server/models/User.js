@@ -1,36 +1,26 @@
 const mongoose = require('mongoose');
 
-const UserSchema = new mongoose.Schema({
-  name: {
+const userSchema = new mongoose.Schema({
+  firebaseUid: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   email: {
     type: String,
     required: true,
     unique: true
   },
-  picture: {
-    type: String
-  },
-  firebaseUid: {
-    type: String
-  },
-  role: {
+  name: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
+    required: true
+  },
+  picture: {
+    type: String,
+    default: null
   },
   stats: {
     testsCompleted: {
-      type: Number,
-      default: 0
-    },
-    avgWpm: {
-      type: Number,
-      default: 0
-    },
-    avgAccuracy: {
       type: Number,
       default: 0
     },
@@ -42,15 +32,19 @@ const UserSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    totalTypingTime: {
-      type: Number, // in seconds
-      default: 0
-    },
-    rank: {
+    avgWpm: {
       type: Number,
       default: 0
     },
-    percentile: {
+    avgAccuracy: {
+      type: Number,
+      default: 0
+    },
+    totalCharacters: {
+      type: Number,
+      default: 0
+    },
+    totalTime: {
       type: Number,
       default: 0
     }
@@ -61,11 +55,11 @@ const UserSchema = new mongoose.Schema({
       enum: ['light', 'dark', 'system'],
       default: 'system'
     },
-    keyboardSound: {
-      type: Boolean,
-      default: true
+    testDuration: {
+      type: Number,
+      default: 60
     },
-    showLiveWpm: {
+    showKeyboard: {
       type: Boolean,
       default: true
     }
@@ -73,11 +67,9 @@ const UserSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('user', UserSchema);
+module.exports = mongoose.model('User', userSchema);

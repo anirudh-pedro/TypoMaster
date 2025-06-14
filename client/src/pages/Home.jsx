@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { FaKeyboard, FaTrophy, FaChartLine, FaArrowRight } from 'react-icons/fa';
+import { AppContext } from '../App';
 
-const Home = ({ user, logout }) => {
+const Home = () => {
+  // Get user and logout from context
+  const { user, logout } = useContext(AppContext) || {};
+
   const [typedText, setTypedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const demoText = "Improve your typing speed and accuracy with TypoMaster.";
@@ -114,7 +118,7 @@ const Home = ({ user, logout }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Nav user={user} logout={logout} />
+      <Nav />
       
       {/* Hero Section with Interactive Demo */}
       <section className="pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pb-24">
