@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
-import { FaRedo, FaClock, FaKeyboard, FaTachometerAlt, FaCheck } from 'react-icons/fa';
-import { AppContext } from '../App'; // Import the context
+import { FaRedo, FaClock, FaKeyboard, FaTachometerAlt, FaCheck, FaSave, FaSpinner, FaDatabase } from 'react-icons/fa';
+import { AppContext } from '../App';
+import { dashboardService } from '../services/api';
+import axios from 'axios';
+import LoginModal from '../components/LoginModal';
 
 const paragraphs = [
   "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet. Typing quickly and accurately is an essential skill for programmers and writers alike. Practice regularly to improve your speed and precision.",
@@ -12,18 +15,20 @@ const paragraphs = [
   "The Internet is a global network of billions of computers and other electronic devices. With the Internet, it's possible to access almost any information, communicate with anyone else in the world, and do much more. You can do all this by connecting a computer to the Internet."
 ];
 
-const TypingTest = ({ user, addTestResult }) => {
-  const { addTestResult: contextAddResult } = useContext(AppContext) || {}; // Use context if available
-  const saveTestResult = addTestResult || contextAddResult; // Use prop if provided, otherwise context
-
+const TypingTest = () => {
+  const { user } = useContext(AppContext) || {}; // Get user from context
+  
   const [paragraph, setParagraph] = useState('');
   const [input, setInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(60);
-  const [timer, setTimer] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [results, setResults] = useState(null);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [errors, setErrors] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   const inputRef = useRef(null);
   const navigate = useNavigate();
@@ -58,6 +63,8 @@ const TypingTest = ({ user, addTestResult }) => {
     setResults(null);
     setCurrentWordIndex(0);
     setErrors(0);
+    setSaveSuccess(false);
+    setSaveError(null);
     
     // Focus on input field
     if (inputRef.current) {
@@ -114,19 +121,62 @@ const TypingTest = ({ user, addTestResult }) => {
       charsTyped: chars,
       correctChars: chars - errors,
       time: 60 - timeLeft,
-      text: paragraph.substring(0, 50) + "..."
+      text: paragraph,
+      date: new Date().toISOString()
     };
     
     // Store results locally
     setResults(resultData);
+  };
+  
+  const saveResultToDatabase = async () => {
+    if (!results) return;
     
-    // Save results via context or props if available
-    if (saveTestResult) {
-      saveTestResult(resultData);
-    } else if (user) {
-      // Fallback: navigate to results with state
-      navigate('/results', { state: { results: resultData } });
+    // If user is not logged in, show login modal
+    if (!user) {
+      setShowLoginModal(true);
+      return;
     }
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      // Prepare test data for submission
+      const testData = {
+        text: results.text,
+        wpm: results.wpm,
+        accuracy: results.accuracy,
+        duration: results.time,
+        errorCount: results.errors,
+        characters: results.charsTyped
+      };
+      
+      // Use the service function
+      const response = await dashboardService.saveTestResult(user.uid, testData);
+      
+      if (response.success) {
+        setSaveSuccess(true);
+        
+        // Wait a moment, then redirect to dashboard with refresh param
+        setTimeout(() => {
+          navigate('/dashboard?tab=achievements&refresh=true');
+        }, 1500);
+      } else {
+        setSaveError(response.message || 'Failed to save your results. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving test results:', error);
+      setSaveError('An error occurred while saving your results. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleGuestContinue = () => {
+    setShowLoginModal(false);
+    // Save as guest or redirect to results
+    navigate('/results', { state: { results } });
   };
   
   const saveAndContinue = () => {
@@ -145,7 +195,7 @@ const TypingTest = ({ user, addTestResult }) => {
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Nav user={user} />
+      <Nav />
       
       <div className="max-w-4xl mx-auto pt-20 px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
@@ -337,6 +387,47 @@ const TypingTest = ({ user, addTestResult }) => {
                 </p>
               </div>
               
+              {/* SUBMIT BUTTON - Prominently displayed */}
+              <div className="mb-8">
+                {!saveSuccess && (
+                  <button 
+                    onClick={saveResultToDatabase}
+                    disabled={isSaving}
+                    className={`w-full flex items-center justify-center px-8 py-4 text-lg font-bold rounded-md text-white bg-green-600 hover:bg-green-700 shadow-lg transform transition-all duration-150 ${
+                      isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'
+                    }`}
+                  >
+                    {isSaving ? (
+                      <>
+                        <FaSpinner className="animate-spin mr-2" /> Saving Result...
+                      </>
+                    ) : (
+                      <>
+                        <FaDatabase className="mr-2" /> Submit Result to Dashboard
+                      </>
+                    )}
+                  </button>
+                )}
+                
+                {/* Show feedback when button is clicked */}
+                {saveError && (
+                  <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-400">
+                    <p className="font-medium">Error!</p>
+                    <p>{saveError}</p>
+                    <p className="text-sm mt-1">Please try again or contact support if the problem persists.</p>
+                  </div>
+                )}
+                
+                {/* Success message */}
+                {saveSuccess && (
+                  <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-md text-center border-l-4 border-green-500">
+                    <p className="text-green-800 dark:text-green-300 font-medium">
+                      Results saved successfully! Redirecting to dashboard...
+                    </p>
+                  </div>
+                )}
+              </div>
+              
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
@@ -361,7 +452,7 @@ const TypingTest = ({ user, addTestResult }) => {
                 </button>
               </div>
               
-              {/* Login prompt if not logged in */}
+              {/* Login prompt - only shown if user is NOT logged in */}
               {!user && (
                 <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-center">
                   <p className="text-indigo-800 dark:text-indigo-300 mb-2">
@@ -379,6 +470,13 @@ const TypingTest = ({ user, addTestResult }) => {
           </div>
         )}
       </div>
+      
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onContinueAsGuest={handleGuestContinue}
+      />
     </div>
   );
 };

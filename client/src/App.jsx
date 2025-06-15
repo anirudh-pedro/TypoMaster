@@ -34,6 +34,7 @@ const AppProvider = ({ children }) => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [achievementNotifications, setAchievementNotifications] = useState([]);
 
   // Save user to localStorage whenever user state changes
   useEffect(() => {
@@ -64,13 +65,25 @@ const AppProvider = ({ children }) => {
     localStorage.removeItem('typomaster_user');
   };
 
+  // Add achievements to notification system
+  const addAchievementNotifications = (achievements) => {
+    setAchievementNotifications(achievements);
+    
+    // Clear notifications after 10 seconds
+    setTimeout(() => {
+      setAchievementNotifications([]);
+    }, 10000);
+  };
+
   // Context value
   const contextValue = {
     user,
     updateUser,
     logout,
     isLoading,
-    setIsLoading
+    setIsLoading,
+    achievementNotifications,
+    addAchievementNotifications
   };
 
   return (
@@ -127,6 +140,7 @@ const AppContent = () => {
 const App = () => {
   // Define user state at the top level so both Nav and Dashboard can access it
   const [user, setUser] = useState(null);
+  const [achievementNotifications, setAchievementNotifications] = useState([]);
   
   // In your AppContext.Provider, include user and setUser
   return (

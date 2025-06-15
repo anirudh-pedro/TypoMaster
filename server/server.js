@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const app = express();
@@ -56,6 +57,10 @@ try {
 } catch (error) {
   console.error('Error loading leaderboard routes:', error.message);
 }
+
+// Add this to your existing routes
+const achievementRoutes = require('./routes/achievement');
+app.use('/api/achievements', achievementRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -117,5 +122,34 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// This schedules a job to run at 12:01 AM every day
+cron.schedule('1 0 * * *', async () => {
+  try {
+    console.log('Running daily achievement reset job...');
+    
+    // Find all users with the daily challenge unlocked
+    const achievements = await Achievement.find({
+      'achievements.id': 'daily_test',
+      'achievements.unlocked': true
+    });
+    
+    console.log(`Found ${achievements.length} users with daily challenge to reset`);
+    
+    // Reset daily challenge for each user
+    for (const userAchievement of achievements) {
+      const dailyChallenge = userAchievement.achievements.find(a => a.id === 'daily_test');
+      if (dailyChallenge) {
+        dailyChallenge.unlocked = false;
+        dailyChallenge.progress = 0;
+        await userAchievement.save();
+      }
+    }
+    
+    console.log('Daily challenge reset completed');
+  } catch (error) {
+    console.error('Error in daily achievement reset job:', error);
+  }
+});
 
 startServer();

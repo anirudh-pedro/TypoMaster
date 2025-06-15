@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { FaKeyboard, FaTrophy, FaChartLine, FaArrowRight } from 'react-icons/fa';
 import { AppContext } from '../App';
+import LoginModal from '../components/LoginModal';
 
 const Home = () => {
   // Get user and logout from context
@@ -14,6 +15,8 @@ const Home = () => {
   const [stats, setStats] = useState({ wpm: 0, accuracy: 100 });
   const [isTyping, setIsTyping] = useState(false);
   const [startTime, setStartTime] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const navigate = useNavigate();
 
   // Simulate typing animation on load
   useEffect(() => {
@@ -116,6 +119,18 @@ const Home = () => {
     }
   ];
 
+  const handleTestClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      setShowLoginModal(true);
+    }
+  };
+  
+  const handleContinueAsGuest = () => {
+    setShowLoginModal(false);
+    navigate('/test');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Nav />
@@ -136,6 +151,7 @@ const Home = () => {
               <Link
                 to="/test"
                 className="rounded-md bg-indigo-600 px-5 py-3 text-md font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors"
+                onClick={handleTestClick}
               >
                 Start Typing Test
               </Link>
@@ -307,6 +323,7 @@ const Home = () => {
             <Link
               to="/test"
               className="inline-flex items-center rounded-md bg-white px-6 py-3 text-lg font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors"
+              onClick={handleTestClick}
             >
               Start Typing <FaArrowRight className="ml-2" />
             </Link>
@@ -341,6 +358,13 @@ const Home = () => {
           </div>
         </div>
       </footer>
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
     </div>
   );
 };

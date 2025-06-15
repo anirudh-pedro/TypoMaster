@@ -15,7 +15,8 @@
     "firebase-admin": "^11.11.1",
     "google-auth-library": "^8.8.0",
     "jsonwebtoken": "^9.0.0",
-    "mongoose": "^7.2.1"
+    "mongoose": "^7.2.1",
+    "node-cron": "^4.1.0"
   },
   "devDependencies": {
     "jest": "^29.5.0",
