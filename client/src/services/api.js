@@ -103,7 +103,24 @@ export const dashboardService = {
   // Get achievements
   getAchievements: async (uid, forceRefresh = false) => {
     try {
-      console.log('Fetching achievements for user:', uid);
+      // Check if we need to force refresh due to day change
+      const now = new Date();
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+      
+      const lastFetch = localStorage.getItem('lastAchievementFetch');
+      
+      // If last fetch was before today's midnight, always force refresh
+      if (lastFetch && new Date(lastFetch) < today) {
+        console.log('Day changed since last achievement fetch, forcing refresh');
+        forceRefresh = true;
+      }
+      
+      // Store current fetch time
+      localStorage.setItem('lastAchievementFetch', now.toISOString());
+      
+      // Normal API call with potential forced refresh
+      console.log('Fetching achievements for user:', uid, forceRefresh ? '(force refresh)' : '');
       const response = await api.get(`/achievements?uid=${uid}${forceRefresh ? '&refresh=true' : ''}`);
       return response.data;
     } catch (error) {
@@ -119,6 +136,18 @@ export const dashboardService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching debug data:', error);
+      throw error;
+    }
+  },
+
+  // Reset daily challenge
+  resetDailyChallenge: async (uid) => {
+    try {
+      console.log('Resetting daily challenge for user:', uid);
+      const response = await api.post(`/achievements/reset-daily?uid=${uid}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error resetting daily challenge:', error);
       throw error;
     }
   }

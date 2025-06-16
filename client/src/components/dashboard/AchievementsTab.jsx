@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaTrophy, FaMedal, FaUnlock, FaLock, FaFire, FaClock, FaBullseye, FaCheckDouble, FaCalendarCheck } from 'react-icons/fa';
+import { FaTrophy, FaMedal, FaUnlock, FaLock, FaFire, FaClock, FaBullseye, FaCheckDouble, FaCalendarCheck, FaSync } from 'react-icons/fa';
 import { dashboardService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,6 +11,7 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newlyUnlocked, setNewlyUnlocked] = useState([]);
+  const [resetMessage, setResetMessage] = useState(null);
 
   // Fetch achievements from database
   const fetchAchievements = useCallback(async () => {
@@ -19,7 +20,23 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
     setIsRefreshing(true);
     try {
       console.log("Fetching achievements for user:", userId);
-      const response = await dashboardService.getAchievements(userId);
+      
+      // First check if it's after midnight and daily challenges need reset
+      const now = new Date();
+      const lastResetCheck = localStorage.getItem('lastDailyResetCheck');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Midnight today
+      
+      // If we haven't checked for resets today, force a reset check
+      let shouldForceRefresh = false;
+      if (!lastResetCheck || new Date(lastResetCheck) < today) {
+        console.log("Checking for daily challenge reset after midnight");
+        localStorage.setItem('lastDailyResetCheck', new Date().toISOString());
+        shouldForceRefresh = true;
+      }
+      
+      // Fetch achievements, with potential force refresh
+      const response = await dashboardService.getAchievements(userId, shouldForceRefresh);
       
       if (response.success) {
         console.log("Achievement data received:", response.data);
@@ -136,6 +153,71 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
       setIsRefreshing(false);
     }
   };
+
+  // Add this function to your AchievementsTab component
+  const forceDailyReset = async () => {
+    if (!userId) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Call the reset endpoint
+      const response = await dashboardService.resetDailyChallenge(userId);
+      console.log('Daily challenge reset response:', response);
+      
+      if (response.success) {
+        // Show success message with our own alert instead of toast
+        setResetMessage({
+          type: 'success',
+          text: 'Daily challenge has been reset successfully'
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => setResetMessage(null), 3000);
+        // Refresh achievements
+        await fetchAchievements();
+      } else {
+        setError('Failed to reset daily challenge');
+      }
+    } catch (err) {
+      console.error('Error resetting daily challenge:', err);
+      setError('Error resetting daily challenge. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Add this function to check if it's past midnight since last check
+  const checkMidnightReset = useCallback(() => {
+    const now = new Date();
+    const lastCheck = localStorage.getItem('lastDailyCheck');
+    
+    // If we have a last check time
+    if (lastCheck) {
+      const lastCheckDate = new Date(lastCheck);
+      const lastMidnight = new Date(now);
+      lastMidnight.setHours(0, 0, 0, 0);
+      
+      // If last check was before today's midnight, force a refresh
+      if (lastCheckDate < lastMidnight) {
+        console.log('Past midnight since last check, forcing refresh');
+        fetchAchievements();
+      }
+    }
+    
+    // Update the last check time
+    localStorage.setItem('lastDailyCheck', now.toISOString());
+  }, [fetchAchievements]);
+
+  // Add this effect to check for midnight reset
+  useEffect(() => {
+    checkMidnightReset();
+    
+    // Also set up an interval to check if midnight passes while the app is open
+    const midnightCheckInterval = setInterval(() => {
+      checkMidnightReset();
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(midnightCheckInterval);
+  }, [checkMidnightReset]);
 
   if (loading) {
     return (
@@ -263,7 +345,7 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
           </div>
         </div>
         
-        {/* Daily Streak Section - ONLY SHOW ONCE, clearly separated */}
+        {/* Daily Challenge Banner */}
         <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
           <div className="flex items-center">
             <div className="p-2 bg-indigo-100 dark:bg-indigo-800/50 rounded-full mr-3">
@@ -285,6 +367,12 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
                   ? `Keep practicing daily to maintain your streak!` 
                   : "Complete a test today to start your streak!"}
               </p>
+              <div className="mt-2 flex items-center text-xs text-gray-500 dark:text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Daily challenge resets at midnight
+              </div>
             </div>
           </div>
         </div>
@@ -401,21 +489,41 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
         )}
         
         {/* Debug button - ONLY SHOW IN DEVELOPMENT */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4">
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="mt-4 flex space-x-2">
             <button
-              onClick={forceRefresh}
-              className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 
-                rounded-md hover:bg-amber-200 dark:hover:bg-amber-800/50 text-sm flex items-center"
+              onClick={handleRefresh}
+              className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 
+                rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-800/50 text-sm flex items-center"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Force Update
+              <FaSync className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
           </div>
         )}
       </div>
+
+      {/* Reset message alert */}
+      {resetMessage && (
+        <div className={`mb-4 p-3 rounded-md ${
+          resetMessage.type === 'success' 
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800/50' 
+            : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50'
+        }`}>
+          <div className="flex items-center">
+            {resetMessage.type === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            {resetMessage.text}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

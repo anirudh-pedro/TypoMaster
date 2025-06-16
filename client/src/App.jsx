@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import Nav from './components/Nav';
 import Home from './pages/Home';
 import TypingTest from './pages/TypingTest';
@@ -7,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
 import './App.css';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Create the App Context
 export const AppContext = createContext();
@@ -147,6 +149,18 @@ const App = () => {
     <AppProvider>
       <BrowserRouter>
         <AppContent />
+        <ToastContainer 
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored" // or "light" or "dark"
+        />
       </BrowserRouter>
     </AppProvider>
   );

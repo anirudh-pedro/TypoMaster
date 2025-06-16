@@ -40,4 +40,7 @@ router.get('/debug/:uid', async (req, res) => {
   }
 });
 
+// Add this route to your achievements router
+router.post('/reset-daily', achievementController.resetDailyChallenge);
+
 module.exports = router;

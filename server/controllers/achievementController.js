@@ -83,6 +83,7 @@ const achievementDefinitions = [
       return 100;
     }
   },
+  // Update the daily_test achievement definition with better date checking
   {
     id: 'daily_test',
     title: 'Daily Practice',
@@ -92,30 +93,72 @@ const achievementDefinitions = [
     rarity: 'common',
     xp: 25,
     checkCondition: async (userId) => {
-      const user = await User.findOne({ firebaseUid: userId });
-      if (!user) return 0;
-      
-      // Get current date at midnight
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Get tomorrow's date at midnight
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      // Check if any test was completed today
-      const test = await TestResult.findOne({ 
-        user: user._id,
-        date: { 
-          $gte: today,
-          $lt: tomorrow
+      try {
+        const user = await User.findOne({ firebaseUid: userId });
+        if (!user) return 0;
+        
+        // Get current date and time
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0); // Midnight today
+        
+        // Tomorrow midnight
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // ALWAYS check for reset first, regardless of anything else
+        console.log(`Checking daily challenge at ${now.toISOString()}, today: ${today.toISOString()}`);
+        
+        const achievementDoc = await Achievement.findOne({ 
+          userId,
+          'achievements.id': 'daily_test'
+        });
+        
+        if (achievementDoc) {
+          const dailyChallenge = achievementDoc.achievements.find(a => a.id === 'daily_test');
+          
+          if (dailyChallenge) {
+            // If unlocked, check if it's from a previous day
+            if (dailyChallenge.unlocked && dailyChallenge.date) {
+              const unlockDate = new Date(dailyChallenge.date);
+              const unlockDay = new Date(unlockDate);
+              unlockDay.setHours(0, 0, 0, 0);
+              
+              // If unlocked on a previous day, ALWAYS reset it
+              if (unlockDay < today) {
+                console.log(`RESETTING daily challenge from ${unlockDay.toISOString()}`);
+                dailyChallenge.unlocked = false;
+                dailyChallenge.progress = 0;
+                await achievementDoc.save();
+              }
+            }
+            
+            // If no unlock date or invalid date but it's unlocked, reset as safety measure
+            if (dailyChallenge.unlocked && (!dailyChallenge.date || isNaN(new Date(dailyChallenge.date).getTime()))) {
+              console.log('RESETTING daily challenge with missing/invalid date');
+              dailyChallenge.unlocked = false;
+              dailyChallenge.progress = 0;
+              await achievementDoc.save();
+            }
+          }
         }
-      });
-      
-      // If test exists for today, mark as 100% complete, otherwise 0%
-      const completed = test ? true : false;
-      console.log(`Daily test challenge: completed today? ${completed} (Current time: ${new Date().toISOString()})`);
-      return completed ? 100 : 0;
+        
+        // Now check if any test was completed today
+        const test = await TestResult.findOne({ 
+          user: user._id,
+          date: { 
+            $gte: today,
+            $lt: tomorrow
+          }
+        });
+        
+        const completed = test ? true : false;
+        console.log(`Daily test completed today? ${completed}`);
+        return completed ? 100 : 0;
+      } catch (error) {
+        console.error("Error checking daily test achievement:", error);
+        return 0;
+      }
     }
   }
 ];
@@ -124,9 +167,12 @@ const achievementDefinitions = [
 exports.getAchievements = async (req, res) => {
   try {
     const { uid, refresh } = req.query;
+    
     if (!uid) {
       return res.status(400).json({ success: false, message: 'User ID is required' });
     }
+
+    console.log(`Getting achievements for user ${uid}${refresh === 'true' ? ' with force refresh' : ''}`);
 
     // Find or create user achievements
     let userAchievements = await Achievement.findOne({ userId: uid });
@@ -155,72 +201,52 @@ exports.getAchievements = async (req, res) => {
       await userAchievements.save();
     }
 
-    // If force refresh requested, recalculate all achievements
+    // If force refresh, perform extra checks
     if (refresh === 'true') {
-      console.log(`Force refreshing achievements for user ${uid}`);
+      console.log("Forcing refresh of achievements, including daily challenge check");
       
-      // Check each achievement
-      for (const achievementDef of achievementDefinitions) {
-        const existingAchievement = userAchievements.achievements.find(a => a.id === achievementDef.id);
+      // Check daily challenge specifically
+      const dailyChallenge = userAchievements.achievements.find(a => a.id === 'daily_test');
+      
+      if (dailyChallenge && dailyChallenge.unlocked && dailyChallenge.date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-        if (existingAchievement) {
-          try {
-            // Recalculate progress
-            const progress = await achievementDef.checkCondition(uid);
-            
-            // Update progress
-            existingAchievement.progress = progress;
-            
-            // Check if needs to be unlocked
-            if (progress >= 100 && !existingAchievement.unlocked) {
-              existingAchievement.unlocked = true;
-              existingAchievement.date = new Date();
-              console.log(`Achievement unlocked: ${existingAchievement.title}`);
-            }
-          } catch (error) {
-            console.error(`Error refreshing achievement ${achievementDef.id}:`, error);
-          }
+        const unlockDate = new Date(dailyChallenge.date);
+        const unlockDay = new Date(unlockDate);
+        unlockDay.setHours(0, 0, 0, 0);
+        
+        // If it was unlocked on a previous day, reset it
+        if (unlockDay < today) {
+          console.log(`Daily challenge from ${unlockDay.toISOString()} is stale, resetting`);
+          dailyChallenge.unlocked = false;
+          dailyChallenge.progress = 0;
+          await userAchievements.save();
         }
       }
       
-      // Recalculate total XP
-      let totalXP = 0;
-      userAchievements.achievements.forEach(a => {
-        if (a.unlocked) totalXP += a.xp;
-      });
-      userAchievements.stats.totalXP = totalXP;
+      // Now run the standard achievement check process
+      await exports.checkAchievements(uid);
       
-      // Update level and other stats
-      userAchievements.stats.unlockedAchievements = 
-        userAchievements.achievements.filter(a => a.unlocked).length;
-      userAchievements.stats.totalAchievements = userAchievements.achievements.length;
-      
-      // Find next milestone
-      const nextAchievement = userAchievements.achievements
-        .filter(a => !a.unlocked)
-        .sort((a, b) => b.progress - a.progress)[0];
-        
-      if (nextAchievement) {
-        userAchievements.stats.nextMilestone = nextAchievement.description;
-      }
-      
-      // Save updated data
-      await userAchievements.save();
-      console.log('Achievements refreshed and saved successfully');
+      // Reload the updated achievements
+      userAchievements = await Achievement.findOne({ userId: uid });
     }
 
     // Return user achievements
-    return res.json({
-      success: true,
-      data: {
-        achievements: userAchievements.achievements,
-        stats: {
-          ...userAchievements.stats,
-          unlockedAchievements: userAchievements.achievements.filter(a => a.unlocked).length,
-          totalAchievements: userAchievements.achievements.length
+    if (userAchievements) {
+      return res.json({
+        success: true,
+        data: {
+          achievements: userAchievements.achievements || [],
+          stats: userAchievements.stats || {}
         }
-      }
-    });
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: 'Achievements not found for user'
+      });
+    }
   } catch (error) {
     console.error('Error in achievements:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
@@ -333,27 +359,38 @@ exports.checkAchievements = async (userId) => {
       
       if (existingAchievement) {
         try {
-          // Always recheck daily challenge regardless of current status
-          if (achievementDef.id === 'daily_test' || !existingAchievement.unlocked) {
+          // Always check the daily challenge status regardless of unlock state
+          if (achievementDef.id === 'daily_test') {
             const progress = await achievementDef.checkCondition(userId);
-            
-            // Update progress
             existingAchievement.progress = progress;
             
-            // For daily challenge, update unlocked status based on current day
-            if (achievementDef.id === 'daily_test') {
-              existingAchievement.unlocked = progress >= 100;
-              if (existingAchievement.unlocked) {
-                existingAchievement.date = new Date();
-              }
-            } 
-            // For other achievements, unlock if completed and not already unlocked
-            else if (progress >= 100 && !existingAchievement.unlocked) {
+            // Update unlocked status - it could be either newly unlocked or reset from a previous day
+            const wasUnlocked = existingAchievement.unlocked;
+            existingAchievement.unlocked = progress >= 100;
+            
+            // If it just got unlocked today, set the date and notify
+            if (!wasUnlocked && existingAchievement.unlocked) {
+              existingAchievement.date = new Date();
+              newlyUnlocked.push(existingAchievement.title);
+              console.log(`Daily challenge unlocked on ${existingAchievement.date.toISOString()}`);
+            }
+          } 
+          // For other non-daily achievements, only check if not already unlocked
+          else if (!existingAchievement.unlocked) {
+            const progress = await achievementDef.checkCondition(userId);
+            existingAchievement.progress = progress;
+            
+            if (progress >= 100) {
               existingAchievement.unlocked = true;
               existingAchievement.date = new Date();
               newlyUnlocked.push(existingAchievement.title);
               console.log(`Achievement unlocked: ${existingAchievement.title}`);
             }
+          }
+          
+          // Add XP if unlocked
+          if (existingAchievement.unlocked) {
+            totalXP += existingAchievement.xp;
           }
         } catch (error) {
           console.error(`Error checking achievement ${achievementDef.id}:`, error);
@@ -383,5 +420,58 @@ exports.checkAchievements = async (userId) => {
     console.error('Detailed achievement error:', error);
     // Return empty array but don't crash
     return [];
+  }
+};
+
+// Add this function to force reset the daily challenge
+exports.resetDailyChallenge = async (req, res) => {
+  try {
+    const { uid } = req.query;
+    
+    if (!uid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User ID is required' 
+      });
+    }
+    
+    // Find user's achievements
+    const achievement = await Achievement.findOne({ userId: uid });
+    
+    if (!achievement) {
+      return res.status(404).json({
+        success: false,
+        message: 'User achievements not found'
+      });
+    }
+    
+    // Find and reset the daily challenge
+    const dailyChallenge = achievement.achievements.find(a => a.id === 'daily_test');
+    
+    if (dailyChallenge) {
+      const wasUnlocked = dailyChallenge.unlocked;
+      dailyChallenge.unlocked = false;
+      dailyChallenge.progress = 0;
+      await achievement.save();
+      
+      return res.json({
+        success: true,
+        message: `Daily challenge has been reset. Was previously ${wasUnlocked ? 'unlocked' : 'locked'}.`,
+        data: {
+          achievement: dailyChallenge
+        }
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: 'Daily challenge not found'
+      });
+    }
+  } catch (error) {
+    console.error('Error resetting daily challenge:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error while resetting daily challenge' 
+    });
   }
 };

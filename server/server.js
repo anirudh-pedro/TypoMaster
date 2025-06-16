@@ -6,6 +6,7 @@ const cron = require('node-cron');
 require('dotenv').config();
 
 const app = express();
+const { initChangeStreams } = require('./services/changeStreamService');
 
 // Updated CORS configuration to handle both development servers
 const corsOptions = {
@@ -150,6 +151,89 @@ cron.schedule('1 0 * * *', async () => {
   } catch (error) {
     console.error('Error in daily achievement reset job:', error);
   }
+});
+
+// Daily achievement reset helper
+let lastResetDay = new Date().getDate(); // Store current day
+
+// Check if we need to reset daily challenges every 15 minutes
+const dailyResetInterval = setInterval(async () => {
+  try {
+    const now = new Date();
+    const currentDay = now.getDate();
+    
+    // If the day has changed
+    if (currentDay !== lastResetDay) {
+      console.log(`Day changed from ${lastResetDay} to ${currentDay}, resetting daily challenges at ${now.toISOString()}`);
+      lastResetDay = currentDay;
+      
+      // Reset all daily challenges
+      const Achievement = require('./models/Achievement');
+      
+      const result = await Achievement.updateMany(
+        { 'achievements.id': 'daily_test', 'achievements.unlocked': true },
+        { 
+          $set: { 
+            'achievements.$.unlocked': false,
+            'achievements.$.progress': 0
+          }
+        }
+      );
+      
+      console.log(`Reset ${result.modifiedCount} daily challenges`);
+    }
+  } catch (error) {
+    console.error('Error in daily challenge reset interval:', error);
+  }
+}, 900000); // Check every 15 minutes (900,000 ms)
+
+// Add this interval after MongoDB connects
+// Set up periodic check for stale daily challenges (every 30 minutes)
+const periodicResetCheck = setInterval(async () => {
+  try {
+    console.log('Running periodic check for stale daily challenges...');
+    const Achievement = require('./models/Achievement');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const staleAchievements = await Achievement.find({
+      'achievements.id': 'daily_test',
+      'achievements.unlocked': true,
+      'achievements.date': { $lt: today }
+    });
+    
+    if (staleAchievements.length > 0) {
+      console.log(`Found ${staleAchievements.length} stale daily challenges to reset`);
+      
+      for (const achievement of staleAchievements) {
+        const dailyChallenge = achievement.achievements.find(a => a.id === 'daily_test');
+        if (dailyChallenge) {
+          dailyChallenge.unlocked = false;
+          dailyChallenge.progress = 0;
+          await achievement.save();
+        }
+      }
+      console.log('Stale daily challenges reset complete');
+    }
+  } catch (error) {
+    console.error('Error in periodic reset check:', error);
+  }
+}, 1800000); // Every 30 minutes
+
+// Clean up interval on server shutdown
+process.on('SIGINT', () => {
+  clearInterval(dailyResetInterval);
+  clearInterval(periodicResetCheck);
+  process.exit(0);
+});
+
+// Initialize change streams for real-time updates
+mongoose.connection.once('open', async () => {
+  console.log('MongoDB connected successfully');
+  
+  // Initialize change streams for real-time updates
+  await initChangeStreams();
 });
 
 startServer();
