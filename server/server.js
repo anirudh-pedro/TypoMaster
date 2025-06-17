@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const cron = require('node-cron');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
@@ -23,6 +26,16 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(helmet());
+app.use(compression());
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
+});
+app.use('/api/', apiLimiter);
 
 // Add this middleware for debugging CORS issues
 app.use((req, res, next) => {
@@ -129,111 +142,61 @@ cron.schedule('1 0 * * *', async () => {
   try {
     console.log('Running daily achievement reset job...');
     
-    // Find all users with the daily challenge unlocked
-    const achievements = await Achievement.find({
-      'achievements.id': 'daily_test',
-      'achievements.unlocked': true
-    });
+    const Achievement = require('./models/Achievement');
     
-    console.log(`Found ${achievements.length} users with daily challenge to reset`);
-    
-    // Reset daily challenge for each user
-    for (const userAchievement of achievements) {
-      const dailyChallenge = userAchievement.achievements.find(a => a.id === 'daily_test');
-      if (dailyChallenge) {
-        dailyChallenge.unlocked = false;
-        dailyChallenge.progress = 0;
-        await userAchievement.save();
+    // Reset all daily challenges in one operation
+    const result = await Achievement.updateMany(
+      { 'achievements.id': 'daily_test' },
+      { 
+        $set: { 
+          'achievements.$.unlocked': false,
+          'achievements.$.progress': 0,
+          'achievements.$.date': null
+        }
       }
-    }
+    );
     
-    console.log('Daily challenge reset completed');
+    console.log(`Reset ${result.modifiedCount} daily challenges`);
   } catch (error) {
     console.error('Error in daily achievement reset job:', error);
   }
+}, {
+  scheduled: true,
+  timezone: "UTC" // Set your application's timezone
 });
 
-// Daily achievement reset helper
-let lastResetDay = new Date().getDate(); // Store current day
-
-// Check if we need to reset daily challenges every 15 minutes
-const dailyResetInterval = setInterval(async () => {
+// Add startup check for any stale daily challenges
+mongoose.connection.once('open', async () => {
+  console.log('MongoDB connected');
+  await initChangeStreams();
+  
+  // Check for stale daily challenges on startup
   try {
-    const now = new Date();
-    const currentDay = now.getDate();
-    
-    // If the day has changed
-    if (currentDay !== lastResetDay) {
-      console.log(`Day changed from ${lastResetDay} to ${currentDay}, resetting daily challenges at ${now.toISOString()}`);
-      lastResetDay = currentDay;
-      
-      // Reset all daily challenges
-      const Achievement = require('./models/Achievement');
-      
-      const result = await Achievement.updateMany(
-        { 'achievements.id': 'daily_test', 'achievements.unlocked': true },
-        { 
-          $set: { 
-            'achievements.$.unlocked': false,
-            'achievements.$.progress': 0
-          }
-        }
-      );
-      
-      console.log(`Reset ${result.modifiedCount} daily challenges`);
-    }
-  } catch (error) {
-    console.error('Error in daily challenge reset interval:', error);
-  }
-}, 900000); // Check every 15 minutes (900,000 ms)
-
-// Add this interval after MongoDB connects
-// Set up periodic check for stale daily challenges (every 30 minutes)
-const periodicResetCheck = setInterval(async () => {
-  try {
-    console.log('Running periodic check for stale daily challenges...');
     const Achievement = require('./models/Achievement');
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const staleAchievements = await Achievement.find({
-      'achievements.id': 'daily_test',
-      'achievements.unlocked': true,
-      'achievements.date': { $lt: today }
-    });
-    
-    if (staleAchievements.length > 0) {
-      console.log(`Found ${staleAchievements.length} stale daily challenges to reset`);
-      
-      for (const achievement of staleAchievements) {
-        const dailyChallenge = achievement.achievements.find(a => a.id === 'daily_test');
-        if (dailyChallenge) {
-          dailyChallenge.unlocked = false;
-          dailyChallenge.progress = 0;
-          await achievement.save();
+    const result = await Achievement.updateMany(
+      { 
+        'achievements.id': 'daily_test',
+        'achievements.unlocked': true,
+        'achievements.date': { $lt: today }
+      },
+      { 
+        $set: { 
+          'achievements.$.unlocked': false,
+          'achievements.$.progress': 0,
+          'achievements.$.date': null
         }
       }
-      console.log('Stale daily challenges reset complete');
+    );
+    
+    if (result.modifiedCount > 0) {
+      console.log(`Reset ${result.modifiedCount} stale daily challenges on startup`);
     }
   } catch (error) {
-    console.error('Error in periodic reset check:', error);
+    console.error('Error checking stale challenges on startup:', error);
   }
-}, 1800000); // Every 30 minutes
-
-// Clean up interval on server shutdown
-process.on('SIGINT', () => {
-  clearInterval(dailyResetInterval);
-  clearInterval(periodicResetCheck);
-  process.exit(0);
-});
-
-// Initialize change streams for real-time updates
-mongoose.connection.once('open', async () => {
-  console.log('MongoDB connected successfully');
-  
-  // Initialize change streams for real-time updates
-  await initChangeStreams();
 });
 
 startServer();

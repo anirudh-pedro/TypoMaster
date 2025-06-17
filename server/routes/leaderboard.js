@@ -12,4 +12,8 @@ router.get('/user/:userId', authenticateUser, leaderboardController.getUserRanki
 // Get real-time leaderboard updates
 router.get('/realtime', leaderboardController.getRealTimeLeaderboard);
 
+// Add these new routes to your existing leaderboard routes
+router.get('/daily-challenge', leaderboardController.getDailyChallengeLeaderboard);
+router.get('/all-time-users', leaderboardController.getAllTimeUserRankings);
+
 module.exports = router;

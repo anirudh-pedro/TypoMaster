@@ -78,5 +78,31 @@ export const leaderboardService = {
     return () => {
       eventSource.close();
     };
+  },
+
+  /**
+   * Get Daily Challenge leaderboard data
+   */
+  getDailyChallengeLeaderboard: async (params = {}) => {
+    try {
+      const response = await axios.get(`${API_URL}/daily-challenge`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching daily challenge leaderboard:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get all-time user rankings
+   */
+  getAllTimeUserRankings: async (params = {}) => {
+    try {
+      const response = await axios.get(`${API_URL}/all-time-users`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all-time user rankings:', error);
+      throw error;
+    }
   }
 };

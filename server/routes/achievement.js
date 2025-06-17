@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const achievementController = require('../controllers/achievementController');
-const TestResult = require('../models/TestResult');
 const User = require('../models/User');
+const TestResult = require('../models/TestResult');
 
 // Get all achievements for a user
-router.get('/', achievementController.getAchievements);
+router.get('/', achievementController.getUserAchievements);
 
 // Add a debug route to check test count
 router.get('/debug/:uid', async (req, res) => {
@@ -40,7 +40,8 @@ router.get('/debug/:uid', async (req, res) => {
   }
 });
 
-// Add this route to your achievements router
-router.post('/reset-daily', achievementController.resetDailyChallenge);
+// Make sure all routes have properly defined controller functions
+router.post('/process-test', achievementController.processTestResult);
 
+// Export the router
 module.exports = router;

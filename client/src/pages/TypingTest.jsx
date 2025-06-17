@@ -70,6 +70,26 @@ const TypingTest = () => {
     }
   }, [input]);
   
+  // Add this useEffect after your other useEffects
+  useEffect(() => {
+    // Function to handle keyboard shortcuts
+    const handleKeyDown = (e) => {
+      // Block Ctrl+C, Ctrl+V, Ctrl+X
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+        e.preventDefault();
+        return false;
+      }
+    };
+    
+    // Add the event listener
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+  
   const getRandomParagraph = () => {
     const randomIndex = Math.floor(Math.random() * paragraphs.length);
     setParagraph(paragraphs[randomIndex]);
@@ -90,27 +110,80 @@ const TypingTest = () => {
     }
   };
   
-  // Update the handleInputChange function to use the detailed error calculation
+  // Add this function to validate if typing is legitimate
+  const isLegitimateTyping = (value) => {
+    // Check for repeated spaces
+    if (/\s{2,}/.test(value)) return false;
+    
+    // Check if it's just spaces
+    if (value.trim().length === 0 && value.length > 0) return false;
+    
+    // Check if there's at least one valid word (more than 1 character)
+    const hasRealWords = value.split(' ').some(word => word.length > 1);
+    
+    // Check for unrealistic typing patterns
+    const consistsOfSameChar = /^(.)\1+$/.test(value);
+    
+    return hasRealWords && !consistsOfSameChar;
+  };
+  
+  // First, add a more sophisticated typing pattern detection function
+const detectInvalidTypingPattern = (input) => {
+  // Check for alternating character-space pattern (e.g., "a a a a")
+  const alternatingPattern = /^(. )+.?$/;
+  if (alternatingPattern.test(input)) {
+    return true;
+  }
+  
+  // Check for repeated character patterns (e.g., "aaaaa")
+  const repeatedCharsPattern = /(.)\1{9,}/; // 10+ of the same character
+  if (repeatedCharsPattern.test(input)) {
+    return true;
+  }
+  
+  // Check if most "words" are just single characters
+  const words = input.split(' ').filter(word => word.length > 0);
+  const singleCharWords = words.filter(word => word.length === 1).length;
+  if (words.length >= 5 && (singleCharWords / words.length) > 0.7) {
+    return true; // If over 70% of words are single characters
+  }
+  
+  return false;
+};
+
+  // Update the handleInputChange function
   const handleInputChange = (e) => {
     const value = e.target.value;
+    
+    // Detect potential paste operations by checking for sudden large increases in text length
+    if (value.length > input.length + 10) {
+      // This suggests pasting behavior - ignore the input
+      return;
+    }
     
     // Start timer on first input
     if (!isActive && value.length === 1) {
       setIsActive(true);
     }
     
-    setInput(value);
-    
-    // Calculate current word and errors
-    const words = paragraph.split(' ');
-    const inputWords = value.split(' ');
-    
-    // Update current word index
-    setCurrentWordIndex(inputWords.length - 1);
-    
-    // Calculate detailed errors
-    const detailedErrors = calculateDetailedErrors(paragraph.substring(0, value.length), value);
-    setErrors(detailedErrors.total);
+    // Only allow legitimate typing
+    if (isLegitimateTyping(value) || value.length <= 1) {
+      setInput(value);
+      
+      // Calculate current word and errors
+      const words = paragraph.split(' ');
+      const inputWords = value.split(' ').filter(word => word.length > 0); // Only count non-empty words
+      
+      // Update current word index
+      setCurrentWordIndex(inputWords.length - 1);
+      
+      // Calculate detailed errors
+      const detailedErrors = calculateDetailedErrors(paragraph.substring(0, value.length), value);
+      setErrors(detailedErrors.total);
+    } else {
+      // Optionally alert the user about invalid input
+      // But don't update the input state
+    }
     
     // Auto-scroll the paragraph container to keep the current position visible
     if (paragraphContainerRef.current) {
@@ -144,34 +217,66 @@ const TypingTest = () => {
     setIsActive(false);
     
     // Calculate results
-    const wordsTyped = input.split(' ').length;
-    const chars = input.length;
+    const inputText = input;
+    const paragraphText = paragraph.substring(0, inputText.length);
+    const chars = inputText.length;
     
     // Calculate detailed errors
-    const detailedErrors = calculateDetailedErrors(paragraph.substring(0, chars), input);
+    const detailedErrors = calculateDetailedErrors(paragraphText, inputText);
     
     // Calculate accuracy
     const accuracy = Math.max(0, Math.floor(((chars - detailedErrors.total) / chars) * 100)) || 0;
     
-    // Calculate words per minute (WPM)
-    const minutes = (60 - timeLeft) / 60;
-    const wpm = Math.floor(wordsTyped / minutes) || 0;
+    // Check for invalid typing patterns
+    const isInvalidPattern = detectInvalidTypingPattern(inputText);
     
-    // Create result object with detailed error analysis
-    const resultData = { 
-      wpm, 
+    // Calculate words per minute (WPM) - using a more accurate method
+    const minutes = (60 - timeLeft) / 60;
+    
+    // Count actual words (at least 2 chars) or normalize to standard 5-char word length
+    const standardWordLength = 5; // Average English word length
+    let wpm;
+    
+    if (isInvalidPattern || accuracy < 15) {
+      // If invalid pattern or accuracy is extremely low, penalize the WPM
+      // This prevents gaming the system with letter-space patterns
+      wpm = Math.floor((chars / standardWordLength) * accuracy / 100 / minutes) || 0;
+    } else {
+      // Count words with at least 2 characters, or use character-based calculation
+      const realWords = inputText.split(' ').filter(word => word.length >= 2);
+      
+      if (realWords.length > 5) {
+        // If there are meaningful words, use them for WPM
+        wpm = Math.floor(realWords.length / minutes) || 0;
+      } else {
+        // Otherwise use the standard 5-char per word method
+        wpm = Math.floor((chars / standardWordLength) / minutes) || 0;
+      }
+    }
+    
+    // Implement a reasonable maximum WPM limit
+    const maxReasonableWPM = 220;
+    const finalWPM = Math.min(wpm, maxReasonableWPM);
+    
+    // Create result object
+    const resultData = {
+      wpm: finalWPM,
       accuracy, 
       errors: detailedErrors.total,
-      errorDetails: detailedErrors, // Include detailed error breakdown
+      errorDetails: detailedErrors,
       charsTyped: chars,
       correctChars: chars - detailedErrors.total,
       time: 60 - timeLeft,
       text: paragraph,
+      invalidPattern: isInvalidPattern,
       date: new Date().toISOString()
     };
     
-    // Store results locally
+    // Store results
     setResults(resultData);
+    
+    // Reset input (if needed)
+    // setInput('');
   };
   
   // Update the saveResultToDatabase function to include detailed errors
@@ -181,6 +286,23 @@ const TypingTest = () => {
     // If user is not logged in, show login modal
     if (!user) {
       setShowLoginModal(true);
+      return;
+    }
+    
+    // Additional validation before saving
+    if (results.invalidPattern) {
+      setSaveError("Invalid typing pattern detected. Please type naturally.");
+      return;
+    }
+    
+    if (results.accuracy < 15) {
+      setSaveError("Accuracy is too low. Please try again with more careful typing.");
+      return;
+    }
+    
+    // Calculate words vs errors ratio - should be reasonable
+    if (results.errors > results.charsTyped * 0.7) {
+      setSaveError("Too many errors compared to text length. Please try again.");
       return;
     }
     
@@ -310,8 +432,11 @@ const TypingTest = () => {
                     lineHeight: "1.8",
                     width: "100%",
                     overflowWrap: "break-word",
-                    whiteSpace: "pre-wrap"
+                    whiteSpace: "pre-wrap",
+                    userSelect: "none" // Add this to prevent text selection
                   }}
+                  onCopy={handleCopy}
+                  onContextMenu={handleContextMenu}
                 >
                   {/* Replace the content with this div that forces text wrapping */}
                   <div style={{ maxWidth: "100%" }}>
@@ -371,6 +496,10 @@ const TypingTest = () => {
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
+                onPaste={handlePaste}
+                onCopy={handleCopy}
+                onCut={handleCut}
+                onContextMenu={handleContextMenu}
                 placeholder="Start typing here..."
                 className="w-full h-24 p-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono resize-none"
                 disabled={timeLeft === 0}
@@ -386,7 +515,7 @@ const TypingTest = () => {
                   </div>
                   <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
                     {isActive 
-                      ? Math.floor((input.split(' ').length / ((60 - timeLeft) / 60)) || 0) 
+                      ? Math.floor((input.split(' ').filter(word => word.length > 0).length / ((60 - timeLeft) / 60)) || 0) 
                       : 0} WPM
                   </span>
                 </div>
@@ -544,14 +673,14 @@ const TypingTest = () => {
                 
                 {/* <button 
                   onClick={viewDetailedResults}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-indigo-500 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent textbase font-medium rounded-md text-indigo-500 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
                 >
                   Detailed Results
                 </button> */}
                 
                 {/* <button 
                   onClick={viewLeaderboard}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-indigo-600 text-base font-medium rounded-md text-indigo-600 dark:text-indigo-400 bg-white dark:bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                  className="inline-flex items-center justify-center px-6 py-3 border border-indigo-600 textbase font-medium rounded-md text-indigo-600 dark:text-indigo-400 bg-white dark:bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                 >
                   View Leaderboard
                 </button> */}
@@ -698,6 +827,32 @@ const calculateDetailedErrors = (originalText, typedText) => {
 // Helper to identify punctuation
 const isPunctuation = (char) => {
   return /[.,\/#!$%\^&\*;:{}=\-_`~()'"]/g.test(char);
+};
+
+// Add these handler functions right after your existing functions but before the return statement
+
+// Prevent copying text from the paragraph
+const handleCopy = (e) => {
+  e.preventDefault();
+  return false;
+};
+
+// Prevent pasting into the input field
+const handlePaste = (e) => {
+  e.preventDefault();
+  return false;
+};
+
+// Prevent cutting from the input field
+const handleCut = (e) => {
+  e.preventDefault();
+  return false;
+};
+
+// Prevent right-click context menu
+const handleContextMenu = (e) => {
+  e.preventDefault();
+  return false;
 };
 
 export default TypingTest;

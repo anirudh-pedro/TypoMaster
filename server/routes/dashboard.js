@@ -153,23 +153,46 @@ router.post('/test-result', async (req, res) => {
     
     const { wpm, accuracy, text, duration, errorCount, characters } = req.body;
 
-    // Validate input data
+    // Enhanced validation
     if (!wpm || !accuracy || !text || !duration) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
       });
     }
-
-    // Create new test result
+    
+    // Check for unrealistic combinations
+    if (accuracy < 15 && wpm > 60) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid result: high speed with extremely low accuracy'
+      });
+    }
+    
+    // Check if errors exceed characters typed
+    if (errorCount >= characters * 0.9) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid result: error count too high'
+      });
+    }
+    
+    // Enforce WPM limit based on accuracy
+    let maxWpm = 220;
+    if (accuracy < 50) {
+      maxWpm = 120; // Lower WPM limit for low accuracy
+    }
+    const validatedWpm = Math.min(wpm, maxWpm);
+    
+    // Create new test result with validated data
     const testResult = new TestResult({
-      wpm,
+      wpm: validatedWpm,
       accuracy,
       text,
       duration,
       errorCount: errorCount || 0,
       characters,
-      user: user._id, // This must be a MongoDB ObjectID
+      user: user._id,
       date: new Date()
     });
     

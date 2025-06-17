@@ -262,3 +262,210 @@ async function sendInitialData(res) {
     res.write(`data: ${JSON.stringify({ type: 'error', message: 'Error loading initial data' })}\n\n`);
   }
 }
+
+/**
+ * Get Daily Challenge leaderboard data
+ * Shows only today's daily challenge results
+ */
+exports.getDailyChallengeLeaderboard = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    const pageSize = parseInt(limit);
+    const skip = (parseInt(page) - 1) * pageSize;
+    
+    // Get today's date range
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Get achievement collection reference
+    const Achievement = require('../models/Achievement');
+    
+    // Find all users who completed the daily challenge today
+    const todaysAchievements = await Achievement.find({
+      'achievements.id': 'daily_test',
+      'achievements.unlocked': true,
+      'achievements.date': { $gte: today, $lt: tomorrow }
+    }).select('userId stats');
+    
+    if (todaysAchievements.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          pageSize,
+          totalItems: 0,
+          totalPages: 0
+        }
+      });
+    }
+    
+    // Get user IDs who completed daily challenge today
+    const userIds = todaysAchievements.map(a => a.userId);
+    
+    // Find users by their Firebase UIDs
+    const users = await User.find({ firebaseUid: { $in: userIds } });
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.firebaseUid] = user;
+    });
+    
+    // Get today's test results for these users
+    const todaysTests = await TestResult.aggregate([
+      {
+        $match: {
+          user: { $in: users.map(u => u._id) },
+          date: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $group: {
+          _id: '$user',
+          averageWpm: { $avg: '$wpm' },
+          averageAccuracy: { $avg: '$accuracy' },
+          testCount: { $sum: 1 },
+          lastTestDate: { $max: '$date' }
+        }
+      },
+      { $sort: { averageWpm: -1 } },
+      { $skip: skip },
+      { $limit: pageSize }
+    ]);
+    
+    // Map results to include user details
+    const leaderboardData = await Promise.all(todaysTests.map(async (result) => {
+      const user = await User.findById(result._id);
+      return {
+        _id: result._id,
+        averageWpm: Math.round(result.averageWpm * 10) / 10, // Round to 1 decimal
+        averageAccuracy: Math.round(result.averageAccuracy * 10) / 10,
+        testCount: result.testCount,
+        lastTestDate: result.lastTestDate,
+        userInfo: user ? {
+          name: user.name,
+          picture: user.picture,
+          firebaseUid: user.firebaseUid
+        } : {
+          name: 'Anonymous',
+          picture: null,
+          firebaseUid: null
+        }
+      };
+    }));
+    
+    // Get total count
+    const totalItems = todaysAchievements.length;
+    
+    res.status(200).json({
+      success: true,
+      data: leaderboardData,
+      pagination: {
+        page: parseInt(page),
+        pageSize,
+        totalItems,
+        totalPages: Math.ceil(totalItems / pageSize)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching daily challenge leaderboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch daily challenge leaderboard',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get all-time user rankings (based on average scores)
+ */
+exports.getAllTimeUserRankings = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    const pageSize = parseInt(limit);
+    const skip = (parseInt(page) - 1) * pageSize;
+    
+    // Get average WPM and accuracy for all users
+    const userAverages = await TestResult.aggregate([
+      {
+        $group: {
+          _id: '$user',
+          averageWpm: { $avg: '$wpm' },
+          averageAccuracy: { $avg: '$accuracy' },
+          testCount: { $sum: 1 },
+          bestWpm: { $max: '$wpm' }
+        }
+      },
+      {
+        $match: {
+          testCount: { $gte: 3 } // Only include users with at least 3 tests
+        }
+      },
+      { $sort: { averageWpm: -1 } },
+      { $skip: skip },
+      { $limit: pageSize }
+    ]);
+    
+    // Map results to include user details
+    const leaderboardData = await Promise.all(userAverages.map(async (result) => {
+      const user = await User.findById(result._id);
+      return {
+        _id: result._id,
+        averageWpm: Math.round(result.averageWpm * 10) / 10,
+        averageAccuracy: Math.round(result.averageAccuracy * 10) / 10,
+        bestWpm: result.bestWpm,
+        testCount: result.testCount,
+        userInfo: user ? {
+          name: user.name,
+          picture: user.picture,
+          firebaseUid: user.firebaseUid
+        } : {
+          name: 'Anonymous',
+          picture: null,
+          firebaseUid: null
+        }
+      };
+    }));
+    
+    // Get total users count that have at least 3 tests
+    const countPipeline = [
+      {
+        $group: {
+          _id: '$user',
+          testCount: { $sum: 1 }
+        }
+      },
+      {
+        $match: {
+          testCount: { $gte: 3 }
+        }
+      },
+      {
+        $count: 'totalUsers'
+      }
+    ];
+    
+    const countResult = await TestResult.aggregate(countPipeline);
+    const totalItems = countResult.length > 0 ? countResult[0].totalUsers : 0;
+    
+    res.status(200).json({
+      success: true,
+      data: leaderboardData,
+      pagination: {
+        page: parseInt(page),
+        pageSize,
+        totalItems,
+        totalPages: Math.ceil(totalItems / pageSize)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all-time user rankings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch all-time user rankings',
+      error: error.message
+    });
+  }
+};
