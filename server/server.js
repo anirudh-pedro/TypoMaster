@@ -16,7 +16,8 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',  // Create React App default
     'http://localhost:5173',  // Vite default
-    'http://localhost:4173',  // Vite preview
+    'http://localhost:4173', 
+    'https://typo-master-alpha.vercel.app',
     process.env.CLIENT_URL    // Custom client URL from environment
   ].filter(Boolean), // Remove any undefined values
   credentials: true,
