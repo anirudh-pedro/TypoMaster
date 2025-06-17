@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/api/leaderboard';
+const API_URL = 'https://typomaster-1cvz.onrender.com/api/leaderboard';
 
 export const leaderboardService = {
   /**

@@ -165,7 +165,7 @@ exports.checkAchievements = async (uid) => {
       console.log('User not found for achievement checking');
       return [];
     }
-    
+    // C:\Users\HP\Desktop\web practice\TypoMaster\server
     // Get user's achievement document or create one
     let userAchievements = await Achievement.findOne({ userId: uid });
     if (!userAchievements) {
