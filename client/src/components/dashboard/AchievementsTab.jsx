@@ -313,18 +313,6 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
                   {stats?.currentStreak || 0} Day Streak
                 </span>
               </div>
-              <span className="mx-2 text-gray-400">|</span>
-              <div>
-                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                  {stats?.unlockedAchievements || 0}/{stats?.totalAchievements || 0} Unlocked
-                </span>
-              </div>
-              <span className="mx-2 text-gray-400">|</span>
-              <div>
-                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                  {stats?.totalXP || 0} XP
-                </span>
-              </div>
             </div>
 
             {/* Refresh button */}
@@ -476,7 +464,7 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
           <div className="text-center py-8">
             <FaTrophy className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
             <p className="text-gray-500 dark:text-gray-400">No achievements found. Start typing tests to unlock achievements!</p>
-            <button
+            {/* <button
               onClick={handleRefresh}
               className="mt-4 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-800/50 flex items-center mx-auto"
             >
@@ -484,21 +472,21 @@ const AchievementsTab = ({ userId, refreshTrigger = 0 }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               Refresh
-            </button>
+            </button> */}
           </div>
         )}
         
         {/* Debug button - ONLY SHOW IN DEVELOPMENT */}
         {process.env.NODE_ENV !== 'production' && (
           <div className="mt-4 flex space-x-2">
-            <button
+            {/* <button
               onClick={handleRefresh}
               className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 
                 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-800/50 text-sm flex items-center"
             >
               <FaSync className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
-            </button>
+            </button> */}
           </div>
         )}
       </div>

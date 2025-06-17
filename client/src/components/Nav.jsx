@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaKeyboard, FaUser, FaMoon, FaSun, FaChartLine, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
+import { FaKeyboard, FaUser, FaChartLine, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { AppContext } from "../App";
 import LoginModal from './LoginModal';
 
 const Nav = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -16,15 +15,8 @@ const Nav = () => {
   
   const { user, logout } = useContext(AppContext) || {};
   
-  // Dark mode setup
+  // Handle window scroll
   useEffect(() => {
-    const darkModePreference = localStorage.getItem('darkMode');
-    setIsDarkMode(darkModePreference === 'enabled');
-    
-    if (darkModePreference === 'enabled') {
-      document.documentElement.classList.add('dark');
-    }
-    
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
@@ -32,19 +24,6 @@ const Nav = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
-  const toggleDarkMode = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'enabled');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'disabled');
-    }
-  };
   
   const toggleProfileMenu = () => {
     setProfileMenuOpen(!profileMenuOpen);
@@ -160,22 +139,13 @@ const Nav = () => {
             
             {/* Right side controls */}
             <div className="flex items-center">
-              {/* Dark mode toggle */}
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-md text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200"
-                aria-label="Toggle dark mode"
-              >
-                {isDarkMode ? <FaSun className="h-5 w-5" /> : <FaMoon className="h-5 w-5" />}
-              </button>
-              
               {/* Profile/Login based on auth state */}
               {user ? (
-                <div className="ml-3 relative">
+                <div className="relative">
                   <button
                     id="profile-avatar-button"
                     onClick={toggleProfileMenu}
-                    className="flex text-sm rounded-full focus:outline-none"
+                    className="flex text-sm rounded-full focus:outline-none cursor-pointer"
                     type="button"
                     aria-haspopup="true"
                     aria-expanded={profileMenuOpen}
@@ -238,7 +208,7 @@ const Nav = () => {
               ) : (
                 <Link
                   to="/login"
-                  className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
                 >
                   <FaUser className="mr-1.5" />
                   Sign In
