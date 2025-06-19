@@ -100,14 +100,20 @@ const connectDB = async () => {
   }
 };
 
-// Serve static files from React app in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+// Replace your existing static file serving code with this:
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'TypoMaster API is running', 
+    version: '1.0.0',
+    endpoints: [
+      '/api/auth',
+      '/api/user',
+      '/api/tests',
+      '/api/dashboard',
+      '/api/achievements'
+    ]
   });
-}
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
