@@ -126,14 +126,14 @@ const Nav = () => {
                 >
                   Typing Test
                 </Link>
-                <Link 
+                {/* <Link 
                   to="/leaderboard" 
                   className={location.pathname === '/leaderboard' 
                     ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
                     : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
                 >
                   Leaderboard
-                </Link>
+                </Link> */}
               </div>
             </div>
             
@@ -259,7 +259,7 @@ const Nav = () => {
               >
                 Typing Test
               </Link>
-              <Link
+              {/* <Link
                 to="/leaderboard"
                 className={location.pathname === '/leaderboard' 
                   ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
@@ -267,7 +267,7 @@ const Nav = () => {
                 onClick={() => setIsOpen(false)}
               >
                 Leaderboard
-              </Link>
+              </Link> */}
               {user && (
                 <Link
                   to="/dashboard"

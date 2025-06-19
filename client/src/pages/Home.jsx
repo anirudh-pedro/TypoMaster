@@ -338,9 +338,9 @@ const Home = () => {
             <Link to="/test" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
               Practice
             </Link>
-            <Link to="/leaderboard" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+            {/* <Link to="/leaderboard" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
               Leaderboard
-            </Link>
+            </Link> */}
             {user ? (
               <Link to="/dashboard" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                 Dashboard

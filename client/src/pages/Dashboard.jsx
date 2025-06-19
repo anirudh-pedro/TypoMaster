@@ -21,7 +21,7 @@ const Dashboard = () => {
   const { user, logout } = useContext(AppContext) || {};
   
   // Define activeTab state first
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [achievementRefreshTrigger, setAchievementRefreshTrigger] = useState(0);
   
   // Add state for dashboard data
@@ -119,16 +119,16 @@ const Dashboard = () => {
   // Render the appropriate tab content based on activeTab
   const renderTabContent = () => {
     switch(activeTab) {
-      case 'overview':
-        return <OverviewTab data={dashboardData} />;
+      // case 'overview':
+      //   return <OverviewTab data={dashboardData} />;
       case 'history':
         return <HistoryTab userId={user.uid} />;
       case 'analytics':
         return <AnalyticsTab userId={user.uid} />;
-      case 'achievements':
-        return <AchievementsTab userId={user.uid} refreshTrigger={achievementRefreshTrigger} />;
+      // case 'achievements':
+      //   return <AchievementsTab userId={user.uid} refreshTrigger={achievementRefreshTrigger} />;
       default:
-        return <OverviewTab data={dashboardData} />;
+        return <AnalyticsTab userId={user.uid} />;
     }
   };
 

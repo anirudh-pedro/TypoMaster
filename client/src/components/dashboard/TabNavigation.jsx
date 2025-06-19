@@ -11,10 +11,10 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
   
   // Define tabs for reuse
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: <FaChartLine className="w-4 h-4" /> },
-    { id: 'history', label: 'Test History', icon: <FaHistory className="w-4 h-4" /> }, 
+    // { id: 'overview', label: 'Overview', icon: <FaChartLine className="w-4 h-4" /> },
     { id: 'analytics', label: 'Analytics', icon: <FaChartBar className="w-4 h-4" /> },
-    { id: 'achievements', label: 'Achievements', icon: <FaTrophy className="w-4 h-4" /> }
+    { id: 'history', label: 'Test History', icon: <FaHistory className="w-4 h-4" /> }, 
+    // { id: 'achievements', label: 'Achievements', icon: <FaTrophy className="w-4 h-4" /> }
   ];
 
   // Check if scrolling is possible and update scroll indicators

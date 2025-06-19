@@ -441,7 +441,7 @@ const AnalyticsTab = ({ userId }) => {
             </div>
           </div>
           
-          <div className="bg-purple-50 dark:bg-purple-900/50 p-4 rounded-lg">
+          {/* <div className="bg-purple-50 dark:bg-purple-900/50 p-4 rounded-lg">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 mr-4">
                 <FaClock className="text-purple-600 dark:text-purple-400" />
@@ -454,7 +454,7 @@ const AnalyticsTab = ({ userId }) => {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         
         {/* NEW: Tests frequency card */}
@@ -466,13 +466,13 @@ const AnalyticsTab = ({ userId }) => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
+              {/* <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Daily Average</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {(totalTests / (period === 'week' ? 7 : period === 'month' ? 30 : 365)).toFixed(1)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">tests per day</p>
-              </div>
+              </div> */}
               
               <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Most Active Day</p>
