@@ -2,14 +2,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FaChartLine, FaHistory, FaTrophy, FaChartBar } from 'react-icons/fa';
 
 const TabNavigation = ({ activeTab, setActiveTab }) => {
-  // Reference for scrolling container
   const scrollContainerRef = useRef(null);
   
-  // State to track if scrolling is possible
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   
-  // Define tabs for reuse
   const tabs = [
     // { id: 'overview', label: 'Overview', icon: <FaChartLine className="w-4 h-4" /> },
     { id: 'analytics', label: 'Analytics', icon: <FaChartBar className="w-4 h-4" /> },
@@ -17,7 +14,6 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
     // { id: 'achievements', label: 'Achievements', icon: <FaTrophy className="w-4 h-4" /> }
   ];
 
-  // Check if scrolling is possible and update scroll indicators
   const checkScroll = () => {
     const container = scrollContainerRef.current;
     if (container) {
@@ -28,35 +24,29 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
     }
   };
 
-  // Scroll active tab into view when it changes
   useEffect(() => {
     if (scrollContainerRef.current) {
       const activeTabElement = document.getElementById(`${activeTab}-tab-button`);
       if (activeTabElement) {
-        // Calculate position to center the active tab
         const scrollContainer = scrollContainerRef.current;
         const containerWidth = scrollContainer.offsetWidth;
         const activeTabPosition = activeTabElement.offsetLeft;
         const activeTabWidth = activeTabElement.offsetWidth;
         
-        // Center the active tab in the container with smooth scrolling
         scrollContainer.scrollTo({
           left: activeTabPosition - (containerWidth / 2) + (activeTabWidth / 2),
           behavior: 'smooth'
         });
         
-        // Check scroll position after animation
         setTimeout(checkScroll, 300);
       }
     }
   }, [activeTab]);
   
-  // Set up scroll event listener
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', checkScroll);
-      // Check initial scroll state
       checkScroll();
       
       return () => {
@@ -65,7 +55,6 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
     }
   }, []);
   
-  // Re-check scroll when window resizes
   useEffect(() => {
     window.addEventListener('resize', checkScroll);
     return () => {
@@ -75,19 +64,17 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
 
   return (
     <div className="relative border-b border-gray-200 dark:border-gray-700 mb-8">
-      {/* Left scroll indicator */}
       {canScrollLeft && (
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
       )}
       
-      {/* Scrollable Navigation */}
       <div 
         ref={scrollContainerRef}
         className="flex overflow-x-auto scrollbar-hide pb-1"
         style={{ 
           scrollbarWidth: 'none', 
           msOverflowStyle: 'none',
-          WebkitOverflowScrolling: 'touch' // For smoother scrolling on iOS
+          WebkitOverflowScrolling: 'touch' 
         }}
         onScroll={checkScroll}
       >
@@ -110,12 +97,10 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
         </div>
       </div>
       
-      {/* Right scroll indicator */}
       {canScrollRight && (
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
       )}
       
-      {/* Add style to hide scrollbar */}
       <style jsx="true">{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

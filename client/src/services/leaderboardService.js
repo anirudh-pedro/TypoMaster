@@ -3,9 +3,7 @@ import axios from 'axios';
 const API_URL = 'https://typomaster-1cvz.onrender.com/api/leaderboard';
 
 export const leaderboardService = {
-  /**
-   * Get leaderboard data with filtering and pagination
-   */
+
   getLeaderboard: async (params = {}) => {
     const { timeframe = 'all', page = 1, limit = 20, sort = 'wpm' } = params;
     try {
@@ -19,9 +17,7 @@ export const leaderboardService = {
     }
   },
 
-  /**
-   * Get user ranking in global leaderboard
-   */
+
   getUserRanking: async (userId) => {
     try {
       const response = await axios.get(`${API_URL}/user/${userId}`);
@@ -33,7 +29,6 @@ export const leaderboardService = {
   },
 
   /**
-   * Subscribe to real-time leaderboard updates
    * @param {Function} onUpdate - Callback for new results
    * @param {Function} onInitial - Callback for initial data load
    * @param {Function} onError - Callback for errors
@@ -58,7 +53,6 @@ export const leaderboardService = {
             if (onError) onError(data.message);
             break;
           case 'heartbeat':
-            // Heartbeat just keeps connection alive, nothing to do
             break;
           default:
             console.log('Unknown event type:', data.type);
@@ -74,15 +68,12 @@ export const leaderboardService = {
       if (onError) onError('Connection to leaderboard updates lost');
     };
     
-    // Return unsubscribe function
     return () => {
       eventSource.close();
     };
   },
 
-  /**
-   * Get Daily Challenge leaderboard data
-   */
+ 
   getDailyChallengeLeaderboard: async (params = {}) => {
     try {
       const response = await axios.get(`${API_URL}/daily-challenge`, { params });
@@ -93,9 +84,7 @@ export const leaderboardService = {
     }
   },
   
-  /**
-   * Get all-time user rankings
-   */
+
   getAllTimeUserRankings: async (params = {}) => {
     try {
       const response = await axios.get(`${API_URL}/all-time-users`, { params });

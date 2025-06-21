@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Mock user data for now (since we don't have User model yet)
 const mockUsers = [
   {
     id: '1',
@@ -23,12 +22,10 @@ const mockUsers = [
   }
 ];
 
-// GET /api/users/profile/:userId - Get user profile
 router.get('/profile/:userId', (req, res) => {
   try {
     const { userId } = req.params;
     
-    // For now, return mock data
     const user = mockUsers.find(u => u.id === userId) || mockUsers[0];
     
     res.json({
@@ -41,13 +38,11 @@ router.get('/profile/:userId', (req, res) => {
   }
 });
 
-// PUT /api/users/profile/:userId - Update user profile
 router.put('/profile/:userId', (req, res) => {
   try {
     const { userId } = req.params;
     const { name, preferences } = req.body;
 
-    // For now, just return success with mock data
     res.json({
       success: true,
       user: {
@@ -62,7 +57,6 @@ router.put('/profile/:userId', (req, res) => {
   }
 });
 
-// GET /api/users - Get all users
 router.get('/', (req, res) => {
   try {
     res.json({

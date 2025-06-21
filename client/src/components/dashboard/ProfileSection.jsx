@@ -6,7 +6,6 @@ import { getNavProfileImage } from '../Nav';
 const ProfileSection = ({ user, logout }) => {
   const navigate = useNavigate();
   
-  // Helper function for user initials (fallback)
   const getUserInitials = () => {
     if (!user) return 'U';
     
@@ -25,13 +24,11 @@ const ProfileSection = ({ user, logout }) => {
     return 'U';
   };
   
-  // Get the profile image URL using the shared function
   const profileImageUrl = getNavProfileImage(user);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-        {/* Profile Image */}
         <div className="relative">
           <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-200 dark:border-indigo-800">
             {profileImageUrl ? (
@@ -55,7 +52,6 @@ const ProfileSection = ({ user, logout }) => {
           </div>
         </div>
         
-        {/* User Info */}
         <div className="flex-1 text-center md:text-left">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome, {user.name}!</h1>
           <p className="text-gray-600 dark:text-gray-400">Track your typing progress and statistics</p>

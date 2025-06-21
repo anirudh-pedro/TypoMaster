@@ -6,7 +6,6 @@ import { AppContext } from '../App';
 import LoginModal from '../components/LoginModal';
 
 const Home = () => {
-  // Get user and logout from context
   const { user, logout } = useContext(AppContext) || {};
 
   const [typedText, setTypedText] = useState('');
@@ -18,7 +17,6 @@ const Home = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
 
-  // Simulate typing animation on load
   useEffect(() => {
     let timeout;
     
@@ -32,7 +30,6 @@ const Home = () => {
     return () => clearTimeout(timeout);
   }, [currentIndex, demoText, isTyping]);
 
-  // Reset demo when typing animation completes
   useEffect(() => {
     if (currentIndex === demoText.length && !isTyping) {
       const resetTimeout = setTimeout(() => {
@@ -44,7 +41,6 @@ const Home = () => {
     }
   }, [currentIndex, demoText.length, isTyping]);
 
-  // Handle user input in demo
   const handleDemoKeyDown = (e) => {
     if (!isTyping) {
       setIsTyping(true);
@@ -52,7 +48,6 @@ const Home = () => {
       setStartTime(Date.now());
     }
     
-    // Only handle printable characters
     if (e.key.length === 1 || e.key === 'Backspace') {
       e.preventDefault();
       
@@ -61,12 +56,10 @@ const Home = () => {
       } else {
         setTypedText(prev => prev + e.key);
         
-        // Calculate stats
         const elapsedMinutes = (Date.now() - startTime) / 60000;
         if (elapsedMinutes > 0) {
           const wpm = Math.round(typedText.length / 5 / elapsedMinutes);
           
-          // Calculate accuracy
           let correctChars = 0;
           for (let i = 0; i < typedText.length; i++) {
             if (i < demoText.length && typedText[i] === demoText[i]) {
@@ -81,7 +74,6 @@ const Home = () => {
     }
   };
 
-  // Features data
   const features = [
     {
       icon: <FaKeyboard className="h-12 w-12 text-indigo-500" />,
@@ -100,7 +92,6 @@ const Home = () => {
     }
   ];
 
-  // Testimonials data
   const testimonials = [
     {
       content: "TypoMaster helped me increase my typing speed from 40 to 85 WPM in just one month of practice!",
@@ -135,7 +126,6 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Nav />
       
-      {/* Hero Section with Interactive Demo */}
       <section className="pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pb-24">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
@@ -166,10 +156,8 @@ const Home = () => {
             </div>
           </div>
           
-          {/* Interactive Demo */}
           <div className="mt-12 sm:mt-16">
             <div className="relative mx-auto max-w-3xl bg-white dark:bg-gray-800 shadow-xl rounded-lg overflow-hidden">
-              {/* Demo Header */}
               <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center">
                 <div className="flex space-x-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -181,7 +169,6 @@ const Home = () => {
                 </div>
               </div>
               
-              {/* Demo Content */}
               <div 
                 className="p-6 focus:outline-none cursor-text" 
                 tabIndex={0}
@@ -194,7 +181,6 @@ const Home = () => {
                   }
                 }}
               >
-                {/* Demo Stats */}
                 {isTyping && (
                   <div className="flex justify-between mb-4 text-sm">
                     <div className="bg-indigo-100 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
@@ -206,12 +192,10 @@ const Home = () => {
                   </div>
                 )}
                 
-                {/* Text Display */}
                 <div className="text-lg sm:text-xl font-mono">
                   {isTyping ? (
                     <div>
                       {demoText.split('').map((char, index) => {
-                        // Determine character status
                         let status = '';
                         if (index < typedText.length) {
                           status = typedText[index] === char ? 'correct' : 'incorrect';
@@ -242,7 +226,6 @@ const Home = () => {
                   )}
                 </div>
                 
-                {/* Instruction Text */}
                 <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   {isTyping ? 'Type the text above' : 'Click to start typing or watch the demo'}
                 </div>
@@ -252,7 +235,6 @@ const Home = () => {
         </div>
       </section>
       
-      {/* Features Section */}
       <section className="py-12 bg-white dark:bg-gray-800">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
@@ -280,7 +262,6 @@ const Home = () => {
         </div>
       </section>
       
-      {/* Testimonials Section */}
       <section className="py-12 sm:py-16 lg:py-20">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex flex-col items-center">
@@ -308,7 +289,6 @@ const Home = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
       <section className="py-12 bg-indigo-600 dark:bg-indigo-900">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
@@ -331,7 +311,6 @@ const Home = () => {
         </div>
       </section>
       
-      {/* Footer */}
       <footer className="bg-white dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
           <div className="flex justify-center space-x-6 md:order-2">
@@ -359,7 +338,6 @@ const Home = () => {
         </div>
       </footer>
 
-      {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

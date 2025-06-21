@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaKeyboard, FaHome } from "react-icons/fa";
-import { useAppContext } from "../App"; // Import the custom hook
+import { useAppContext } from "../App"; 
 import { authApi, checkServerAvailability } from "../services/api";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
@@ -11,10 +11,8 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   
-  // Use the custom hook to get context
   const { updateUser } = useAppContext();
 
-  // Firebase configuration
   const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -37,12 +35,10 @@ const Login = () => {
       setIsLoading(true);
       setError('');
       
-      // Initialize Firebase
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
       const provider = new GoogleAuthProvider();
       
-      // Add scopes to get profile information
       provider.addScope('profile');
       provider.addScope('email');
       provider.setCustomParameters({
@@ -53,7 +49,6 @@ const Login = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // Create user object with all image properties
       const userObject = {
         uid: user.uid,
         email: user.email,
@@ -74,7 +69,6 @@ const Login = () => {
         try {
           const response = await authApi.loginWithFirebase(idToken);
           if (response.success) {
-            // Ensure the profile image is preserved
             const mergedUser = {
               ...response.user,
               picture: response.user.picture || userObject.picture,
@@ -83,7 +77,6 @@ const Login = () => {
             };
             console.log('Server auth successful, merged user:', mergedUser);
             updateUser(mergedUser);
-            // Redirect to home page instead of dashboard
             navigate('/');
             return;
           }
@@ -154,7 +147,6 @@ const Login = () => {
               </div>
             ) : (
               <>
-                {/* New Google logo SVG */}
                 <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"

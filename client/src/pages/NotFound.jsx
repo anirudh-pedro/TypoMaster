@@ -5,7 +5,6 @@ import Nav from '../components/Nav';
 import { AppContext } from '../App';
 
 const NotFound = () => {
-  // Get user from context if available
   const { user } = useContext(AppContext) || {};
 
   return (
@@ -13,7 +12,6 @@ const NotFound = () => {
       <Nav user={user} />
       
       <div className="min-h-[calc(100vh-64px)] flex flex-col justify-center items-center px-4 py-12">
-        {/* Logo and Error Code */}
         <div className="text-center">
           <FaKeyboard className="mx-auto h-16 w-16 text-indigo-600 dark:text-indigo-400" />
           <h1 className="mt-4 text-8xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tighter">
@@ -27,7 +25,6 @@ const NotFound = () => {
           </p>
         </div>
 
-        {/* Keyboard visual effect */}
         <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 max-w-lg w-full">
           <div className="grid grid-cols-12 gap-1 text-center">
             {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']'].map((key) => (
@@ -57,7 +54,6 @@ const NotFound = () => {
           </div>
         </div>
 
-        {/* Navigation options */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <Link 
             to="/"

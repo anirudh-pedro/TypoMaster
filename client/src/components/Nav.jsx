@@ -15,7 +15,6 @@ const Nav = () => {
   
   const { user, logout } = useContext(AppContext) || {};
   
-  // Handle window scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -41,13 +40,11 @@ const Nav = () => {
     }
   };
 
-  // New function to handle test button click
   const handleTestClick = (e) => {
     if (!user) {
       e.preventDefault();
       setShowLoginModal(true);
     }
-    // If user is logged in, default link behavior takes over
   };
   
   const handleContinueAsGuest = () => {
@@ -55,7 +52,6 @@ const Nav = () => {
     navigate('/test');
   };
 
-  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       const dropdown = document.getElementById('profile-dropdown');
@@ -76,7 +72,6 @@ const Nav = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileMenuOpen]);
   
-  // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!user) return 'U';
     
@@ -100,14 +95,12 @@ const Nav = () => {
       <nav className="fixed w-full z-10 bg-white dark:bg-gray-800 shadow-md">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16 items-center">
-            {/* Logo */}
             <div className="flex items-center">
               <FaKeyboard className="h-6 w-6 text-indigo-600" />
               <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
                 TypoMaster
               </span>
               
-              {/* Desktop Navigation */}
               <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
                 <Link 
                   to="/" 
@@ -122,24 +115,15 @@ const Nav = () => {
                   className={location.pathname === '/test' 
                     ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
                     : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
-                  onClick={handleTestClick} // Add click handler
+                  onClick={handleTestClick} 
                 >
                   Typing Test
                 </Link>
-                {/* <Link 
-                  to="/leaderboard" 
-                  className={location.pathname === '/leaderboard' 
-                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
-                >
-                  Leaderboard
-                </Link> */}
+                
               </div>
             </div>
             
-            {/* Right side controls */}
             <div className="flex items-center">
-              {/* Profile/Login based on auth state */}
               {user ? (
                 <div className="relative">
                   <button
@@ -150,7 +134,6 @@ const Nav = () => {
                     aria-haspopup="true"
                     aria-expanded={profileMenuOpen}
                   >
-                    {/* Profile image with fallback */}
                     <div className="h-8 w-8 rounded-full overflow-hidden bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-medium border border-indigo-200 dark:border-indigo-800">
                       {user.picture ? (
                         <img
@@ -171,7 +154,6 @@ const Nav = () => {
                     </div>
                   </button>
 
-                  {/* Profile dropdown menu */}
                   {profileMenuOpen && (
                     <div 
                       id="profile-dropdown"
@@ -215,7 +197,6 @@ const Nav = () => {
                 </Link>
               )}
               
-              {/* Mobile menu button */}
               <div className="sm:hidden ml-3">
                 <button
                   onClick={() => setIsOpen(!isOpen)}
@@ -234,7 +215,6 @@ const Nav = () => {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {isOpen && (
           <div className="sm:hidden" id="mobile-menu">
             <div className="px-2 pt-2 pb-3 space-y-1">
@@ -259,15 +239,7 @@ const Nav = () => {
               >
                 Typing Test
               </Link>
-              {/* <Link
-                to="/leaderboard"
-                className={location.pathname === '/leaderboard' 
-                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
-                onClick={() => setIsOpen(false)}
-              >
-                Leaderboard
-              </Link> */}
+              
               {user && (
                 <Link
                   to="/dashboard"
@@ -284,7 +256,6 @@ const Nav = () => {
         )}
       </nav>
 
-      {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
@@ -301,10 +272,9 @@ export const getNavProfileImage = (user) => {
   
   if (!imageUrl) return null;
   
-  // Enhanced Google image URL handling
   if (imageUrl.includes('googleusercontent.com')) {
     let cleanUrl = imageUrl.split('=')[0];
-    return `${cleanUrl}=s96-c`; // Smaller resolution for navbar
+    return `${cleanUrl}=s96-c`;
   }
   
   return imageUrl;

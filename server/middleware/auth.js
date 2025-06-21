@@ -1,11 +1,8 @@
 const User = require('../models/User');
 
-/**
- * Authenticate user based on Firebase UID
- */
+
 exports.authenticateUser = async (req, res, next) => {
   try {
-    // Get UID from request params or query
     const uid = req.params.userId || req.query.uid;
     
     if (!uid) {
@@ -15,7 +12,6 @@ exports.authenticateUser = async (req, res, next) => {
       });
     }
     
-    // Find the user in the database
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       return res.status(404).json({ 
@@ -24,7 +20,6 @@ exports.authenticateUser = async (req, res, next) => {
       });
     }
     
-    // Attach user to request
     req.user = user;
     next();
   } catch (error) {
@@ -36,12 +31,9 @@ exports.authenticateUser = async (req, res, next) => {
   }
 };
 
-/**
- * Optional authentication - doesn't fail if no auth provided
- */
+
 exports.optionalAuth = async (req, res, next) => {
   try {
-    // Get UID from request (if provided)
     const uid = req.params.userId || req.query.uid;
     
     if (!uid) {
@@ -49,14 +41,11 @@ exports.optionalAuth = async (req, res, next) => {
       return next();
     }
     
-    // Find the user in the database
     const user = await User.findOne({ firebaseUid: uid });
     
-    // Attach user to request (might be null)
     req.user = user;
     next();
   } catch (error) {
-    // Just continue without user on error
     req.user = null;
     next();
   }

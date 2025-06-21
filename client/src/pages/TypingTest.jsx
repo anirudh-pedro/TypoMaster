@@ -7,7 +7,6 @@ import { dashboardService } from '../services/api';
 import axios from 'axios';
 import LoginModal from '../components/LoginModal';
 
-// Replace the existing paragraphs array with these longer versions
 const paragraphs = [
   "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet. Typing quickly and accurately is an essential skill for programmers and writers alike. Practice regularly to improve your speed and precision. The benefits of touch typing extend beyond just increased productivity. It reduces mental fatigue, allowing you to focus more on the content rather than the process of typing. Many professional typists can maintain speeds of over 100 words per minute with near-perfect accuracy. This level of proficiency comes from consistent practice and proper technique. Keep your fingers on the home row and develop muscle memory through repetition. As you practice, your brain creates neural pathways that allow your fingers to move without conscious thought, similar to how experienced musicians play instruments without thinking about individual notes. Regular typing practice also improves your spelling and grammar as you become more familiar with common words and phrases.",
   
@@ -21,8 +20,7 @@ const paragraphs = [
 ];
 
 const TypingTest = () => {
-  const { user } = useContext(AppContext) || {}; // Get user from context
-  
+  const { user } = useContext(AppContext) || {}; 
   const [paragraph, setParagraph] = useState('');
   const [input, setInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(60);
@@ -39,12 +37,10 @@ const TypingTest = () => {
   const paragraphContainerRef = useRef(null);
   const navigate = useNavigate();
   
-  // Initialize with a random paragraph
   useEffect(() => {
     getRandomParagraph();
   }, []);
   
-  // Timer logic
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       const interval = setInterval(() => {
@@ -53,14 +49,11 @@ const TypingTest = () => {
       
       return () => clearInterval(interval);
     } else if (timeLeft === 0 && isActive) {
-      // Time's up - calculate results
       endTest();
     }
   }, [isActive, timeLeft]);
   
-  // Add this useEffect to handle auto-scrolling
   useEffect(() => {
-    // Auto-scroll to cursor position
     const cursorElement = document.querySelector('.cursor-position');
     if (cursorElement) {
       cursorElement.scrollIntoView({ 
@@ -70,21 +63,16 @@ const TypingTest = () => {
     }
   }, [input]);
   
-  // Add this useEffect after your other useEffects
   useEffect(() => {
-    // Function to handle keyboard shortcuts
     const handleKeyDown = (e) => {
-      // Block Ctrl+C, Ctrl+V, Ctrl+X
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
         e.preventDefault();
         return false;
       }
     };
     
-    // Add the event listener
     window.addEventListener('keydown', handleKeyDown);
     
-    // Clean up
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -94,7 +82,6 @@ const TypingTest = () => {
     const randomIndex = Math.floor(Math.random() * paragraphs.length);
     setParagraph(paragraphs[randomIndex]);
     
-    // Reset state
     setInput('');
     setTimeLeft(60);
     setIsActive(false);
@@ -104,80 +91,62 @@ const TypingTest = () => {
     setSaveSuccess(false);
     setSaveError(null);
     
-    // Focus on input field
     if (inputRef.current) {
       inputRef.current.focus();
     }
   };
   
-  // Add this function to validate if typing is legitimate
   const isLegitimateTyping = (value) => {
-    // Check for repeated spaces
     if (/\s{2,}/.test(value)) return false;
     
-    // Check if it's just spaces
     if (value.trim().length === 0 && value.length > 0) return false;
     
-    // Check if there's at least one valid word (more than 1 character)
     const hasRealWords = value.split(' ').some(word => word.length > 1);
     
-    // Check for unrealistic typing patterns
     const consistsOfSameChar = /^(.)\1+$/.test(value);
     
     return hasRealWords && !consistsOfSameChar;
   };
   
-  // First, add a more sophisticated typing pattern detection function
 const detectInvalidTypingPattern = (input) => {
-  // Check for alternating character-space pattern (e.g., "a a a a")
   const alternatingPattern = /^(. )+.?$/;
   if (alternatingPattern.test(input)) {
     return true;
   }
   
-  // Check for repeated character patterns (e.g., "aaaaa")
-  const repeatedCharsPattern = /(.)\1{9,}/; // 10+ of the same character
+  const repeatedCharsPattern = /(.)\1{9,}/; 
   if (repeatedCharsPattern.test(input)) {
     return true;
   }
   
-  // Check if most "words" are just single characters
   const words = input.split(' ').filter(word => word.length > 0);
   const singleCharWords = words.filter(word => word.length === 1).length;
   if (words.length >= 5 && (singleCharWords / words.length) > 0.7) {
-    return true; // If over 70% of words are single characters
+    return true; 
   }
   
   return false;
 };
 
-  // Update the handleInputChange function
   const handleInputChange = (e) => {
     const value = e.target.value;
     
-    // Detect potential paste operations by checking for sudden large increases in text length
+    
     if (value.length > input.length + 10) {
-      // This suggests pasting behavior - ignore the input
       return;
     }
     
-    // Start timer on first input
     if (!isActive && value.length === 1) {
       setIsActive(true);
     }
     
-    // Only allow legitimate typing
     if (isLegitimateTyping(value) || value.length <= 1) {
       setInput(value);
       
-      // Calculate current word and errors
       const words = paragraph.split(' ');
-      const inputWords = value.split(' ').filter(word => word.length > 0); // Only count non-empty words
-      
-      // Update current word index
+      const inputWords = value.split(' ').filter(word => word.length > 0); 
       setCurrentWordIndex(inputWords.length - 1);
       
-      // Calculate detailed errors
       const detailedErrors = calculateDetailedErrors(paragraph.substring(0, value.length), value);
       setErrors(detailedErrors.total);
     } else {
@@ -185,24 +154,17 @@ const detectInvalidTypingPattern = (input) => {
       // But don't update the input state
     }
     
-    // Auto-scroll the paragraph container to keep the current position visible
     if (paragraphContainerRef.current) {
-      // Find all character spans in the container
       const spans = paragraphContainerRef.current.querySelectorAll('span');
       
-      // If we've typed enough characters and have that span in view
       if (value.length > 0 && spans[value.length]) {
-        // Get the current span's position
         const currentSpan = spans[value.length];
         const containerRect = paragraphContainerRef.current.getBoundingClientRect();
         const spanRect = currentSpan.getBoundingClientRect();
         
-        // Calculate if the current position is too close to the bottom of the visible area
-        const bottomThreshold = containerRect.bottom - 100; // 100px from bottom
+        const bottomThreshold = containerRect.bottom - 100; 
         
-        // If the current position is too close to or below the visible area, scroll to it
         if (spanRect.top > bottomThreshold || spanRect.top > containerRect.bottom) {
-          // Scroll to position the current character slightly above the bottom
           currentSpan.scrollIntoView({ 
             behavior: 'smooth',
             block: 'center' 
@@ -212,53 +174,39 @@ const detectInvalidTypingPattern = (input) => {
     }
   };
   
-  // Update the endTest function to include detailed error analysis
   const endTest = () => {
     setIsActive(false);
     
-    // Calculate results
     const inputText = input;
     const paragraphText = paragraph.substring(0, inputText.length);
     const chars = inputText.length;
     
-    // Calculate detailed errors
     const detailedErrors = calculateDetailedErrors(paragraphText, inputText);
     
-    // Calculate accuracy
     const accuracy = Math.max(0, Math.floor(((chars - detailedErrors.total) / chars) * 100)) || 0;
     
-    // Check for invalid typing patterns
     const isInvalidPattern = detectInvalidTypingPattern(inputText);
     
-    // Calculate words per minute (WPM) - using a more accurate method
     const minutes = (60 - timeLeft) / 60;
     
-    // Count actual words (at least 2 chars) or normalize to standard 5-char word length
-    const standardWordLength = 5; // Average English word length
+    const standardWordLength = 5; 
     let wpm;
     
     if (isInvalidPattern || accuracy < 15) {
-      // If invalid pattern or accuracy is extremely low, penalize the WPM
-      // This prevents gaming the system with letter-space patterns
       wpm = Math.floor((chars / standardWordLength) * accuracy / 100 / minutes) || 0;
     } else {
-      // Count words with at least 2 characters, or use character-based calculation
       const realWords = inputText.split(' ').filter(word => word.length >= 2);
       
       if (realWords.length > 5) {
-        // If there are meaningful words, use them for WPM
         wpm = Math.floor(realWords.length / minutes) || 0;
       } else {
-        // Otherwise use the standard 5-char per word method
         wpm = Math.floor((chars / standardWordLength) / minutes) || 0;
       }
     }
     
-    // Implement a reasonable maximum WPM limit
     const maxReasonableWPM = 220;
     const finalWPM = Math.min(wpm, maxReasonableWPM);
     
-    // Create result object
     const resultData = {
       wpm: finalWPM,
       accuracy, 
@@ -272,24 +220,19 @@ const detectInvalidTypingPattern = (input) => {
       date: new Date().toISOString()
     };
     
-    // Store results
     setResults(resultData);
     
-    // Reset input (if needed)
-    // setInput('');
+   
   };
   
-  // Update the saveResultToDatabase function to include detailed errors
   const saveResultToDatabase = async () => {
     if (!results) return;
     
-    // If user is not logged in, show login modal
     if (!user) {
       setShowLoginModal(true);
       return;
     }
     
-    // Additional validation before saving
     if (results.invalidPattern) {
       setSaveError("Invalid typing pattern detected. Please type naturally.");
       return;
@@ -300,7 +243,6 @@ const detectInvalidTypingPattern = (input) => {
       return;
     }
     
-    // Calculate words vs errors ratio - should be reasonable
     if (results.errors > results.charsTyped * 0.7) {
       setSaveError("Too many errors compared to text length. Please try again.");
       return;
@@ -310,7 +252,6 @@ const detectInvalidTypingPattern = (input) => {
     setSaveError(null);
     
     try {
-      // Prepare test data for submission
       const testData = {
         text: results.text,
         wpm: results.wpm,
@@ -318,16 +259,14 @@ const detectInvalidTypingPattern = (input) => {
         duration: results.time,
         errorCount: results.errors,
         characters: results.charsTyped,
-        errorDetails: results.errorDetails // Send detailed error analysis
+        errorDetails: results.errorDetails 
       };
       
-      // Use the service function
       const response = await dashboardService.saveTestResult(user.uid, testData);
       
       if (response.success) {
         setSaveSuccess(true);
         
-        // Wait a moment, then redirect to dashboard with refresh param
         setTimeout(() => {
           navigate('/dashboard?tab=achievements&refresh=true');
         }, 1500);
@@ -344,7 +283,6 @@ const detectInvalidTypingPattern = (input) => {
   
   const handleGuestContinue = () => {
     setShowLoginModal(false);
-    // Save as guest or redirect to results
     navigate('/results', { state: { results } });
   };
   
@@ -352,26 +290,14 @@ const detectInvalidTypingPattern = (input) => {
     getRandomParagraph();
   };
   
-  // const viewLeaderboard = () => {
-  //   navigate('/leaderboard');
-  // };
-  
-  // const viewDetailedResults = () => {
-  //   if (results) {
-  //     navigate('/results', { state: { results } });
-  //   }
-  // };
-  
-  // Function to break paragraph into lines of appropriate width
+
   const formatParagraphLines = (text, charsPerLine = 60) => {
     const lines = [];
     let currentLine = '';
     
-    // Split by words to avoid breaking words
     const words = text.split(' ');
     
     for (const word of words) {
-      // If adding this word would exceed line length
       if ((currentLine + ' ' + word).length > charsPerLine && currentLine.length > 0) {
         lines.push(currentLine);
         currentLine = word;
@@ -380,7 +306,6 @@ const detectInvalidTypingPattern = (input) => {
       }
     }
     
-    // Add the last line if not empty
     if (currentLine.length > 0) {
       lines.push(currentLine);
     }
@@ -400,9 +325,7 @@ const detectInvalidTypingPattern = (input) => {
         </h1>
         
         {!results ? (
-          // Typing test interface
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            {/* Timer and controls */}
             <div className="bg-gray-100 dark:bg-gray-700 p-4 flex justify-between items-center">
               <div className="flex items-center">
                 <FaClock className="text-indigo-600 dark:text-indigo-400 mr-2" />
@@ -419,9 +342,7 @@ const detectInvalidTypingPattern = (input) => {
               </button>
             </div>
             
-            {/* Paragraph display */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-              {/* Text container with fixed height and scrolling */}
               <div className="mb-3">
                 <div 
                   ref={paragraphContainerRef}
@@ -433,12 +354,11 @@ const detectInvalidTypingPattern = (input) => {
                     width: "100%",
                     overflowWrap: "break-word",
                     whiteSpace: "pre-wrap",
-                    userSelect: "none" // Add this to prevent text selection
+                    userSelect: "none"
                   }}
                   onCopy={handleCopy}
                   onContextMenu={handleContextMenu}
                 >
-                  {/* Replace the content with this div that forces text wrapping */}
                   <div style={{ maxWidth: "100%" }}>
                     {paragraph.split('').map((char, index) => {
                       let bgColor = '';
@@ -453,7 +373,7 @@ const detectInvalidTypingPattern = (input) => {
                           bgColor = 'bg-red-100 dark:bg-red-900/30';
                         }
                       } else if (index === input.length) {
-                        bgColor = 'bg-gray-200 dark:bg-gray-600'; // Cursor position
+                        bgColor = 'bg-gray-200 dark:bg-gray-600'; 
                         cursorClass = 'cursor-position';
                       }
                       
@@ -475,7 +395,6 @@ const detectInvalidTypingPattern = (input) => {
                 </div>
               </div>
               
-              {/* Progress indicator */}
               <div className="mb-4">
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
                   <div
@@ -490,7 +409,6 @@ const detectInvalidTypingPattern = (input) => {
               </div>
             </div>
             
-            {/* Input area */}
             <div className="p-6">
               <textarea
                 ref={inputRef}
@@ -510,7 +428,6 @@ const detectInvalidTypingPattern = (input) => {
                 autoFocus
               />
               
-              {/* Live stats */}
               <div className="mt-4 grid grid-cols-3 gap-4">
                 <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md text-center">
                   <div className="flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-1">
@@ -547,7 +464,6 @@ const detectInvalidTypingPattern = (input) => {
               </div>
             </div>
             
-            {/* Help text */}
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 text-center text-sm text-gray-500 dark:text-gray-400">
               {isActive 
                 ? "Keep typing! Your time will automatically end after 60 seconds."
@@ -555,7 +471,6 @@ const detectInvalidTypingPattern = (input) => {
             </div>
           </div>
         ) : (
-          // Results screen
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
               <div className="text-center mb-8">
@@ -568,7 +483,6 @@ const detectInvalidTypingPattern = (input) => {
                 </p>
               </div>
               
-              {/* Results grid */}
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg text-center">
                   <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
@@ -607,7 +521,6 @@ const detectInvalidTypingPattern = (input) => {
                 </div>
               </div>
               
-              {/* Performance feedback */}
               <div className="mb-8 text-center">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {results.wpm < 30 
@@ -625,7 +538,6 @@ const detectInvalidTypingPattern = (input) => {
                 </p>
               </div>
               
-              {/* SUBMIT BUTTON - Prominently displayed */}
               <div className="mb-8">
                 {!saveSuccess && (
                   <button 
@@ -647,7 +559,6 @@ const detectInvalidTypingPattern = (input) => {
                   </button>
                 )}
                 
-                {/* Show feedback when button is clicked */}
                 {saveError && (
                   <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-400">
                     <p className="font-medium">Error!</p>
@@ -656,7 +567,6 @@ const detectInvalidTypingPattern = (input) => {
                   </div>
                 )}
                 
-                {/* Success message */}
                 {saveSuccess && (
                   <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-md text-center border-l-4 border-green-500">
                     <p className="text-green-800 dark:text-green-300 font-medium">
@@ -666,7 +576,6 @@ const detectInvalidTypingPattern = (input) => {
                 )}
               </div>
               
-              {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
                   onClick={saveAndContinue}
@@ -675,22 +584,9 @@ const detectInvalidTypingPattern = (input) => {
                   Try Again
                 </button>
                 
-                {/* <button 
-                  onClick={viewDetailedResults}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent textbase font-medium rounded-md text-indigo-500 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
-                >
-                  Detailed Results
-                </button> */}
                 
-                {/* <button 
-                  onClick={viewLeaderboard}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-indigo-600 textbase font-medium rounded-md text-indigo-600 dark:text-indigo-400 bg-white dark:bg-transparent hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                >
-                  View Leaderboard
-                </button> */}
               </div>
               
-              {/* Login prompt - only shown if user is NOT logged in */}
               {!user && (
                 <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-center">
                   <p className="text-indigo-800 dark:text-indigo-300 mb-2">
@@ -709,7 +605,6 @@ const detectInvalidTypingPattern = (input) => {
         )}
       </div>
       
-      {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)} 
@@ -719,36 +614,30 @@ const detectInvalidTypingPattern = (input) => {
   );
 };
 
-// Add this function after the component declaration but before any other functions
 const calculateDetailedErrors = (originalText, typedText) => {
-  // Initialize error tracking
   const errors = {
     total: 0,
-    substitutions: 0, // Wrong character typed
-    insertions: 0,    // Extra characters typed
-    deletions: 0,     // Missing characters
-    transpositions: 0, // Characters swapped
-    misspelled: 0,     // Whole word errors
-    punctuation: 0,    // Punctuation errors
-    capitalization: 0, // Case errors
-    common: {}         // Track common error patterns
+    substitutions: 0, 
+    insertions: 0,    
+    deletions: 0,     
+    transpositions: 0, 
+    misspelled: 0,     
+    punctuation: 0,    
+    capitalization: 0, 
+    common: {}         
   };
   
-  // Early return if either string is empty
   if (!originalText || !typedText) {
     return errors;
   }
   
-  // Process character by character for detailed analysis
   const originalChars = originalText.split('');
   const typedChars = typedText.split('');
   
-  // Simple Levenshtein-based analysis
   let i = 0;
   let j = 0;
   
   while (i < originalChars.length || j < typedChars.length) {
-    // End of typed text but original continues (deletion)
     if (j >= typedChars.length && i < originalChars.length) {
       errors.deletions++;
       errors.total++;
@@ -756,7 +645,6 @@ const calculateDetailedErrors = (originalText, typedText) => {
       continue;
     }
     
-    // End of original text but typed continues (insertion)
     if (i >= originalChars.length && j < typedChars.length) {
       errors.insertions++;
       errors.total++;
@@ -764,14 +652,12 @@ const calculateDetailedErrors = (originalText, typedText) => {
       continue;
     }
     
-    // Check for character match
     if (originalChars[i] === typedChars[j]) {
       i++;
       j++;
       continue;
     }
     
-    // Look ahead to detect transpositions (like "hte" instead of "the")
     if (i + 1 < originalChars.length && j + 1 < typedChars.length &&
         originalChars[i] === typedChars[j + 1] && 
         originalChars[i + 1] === typedChars[j]) {
@@ -782,7 +668,6 @@ const calculateDetailedErrors = (originalText, typedText) => {
       continue;
     }
     
-    // Check for capitalization errors
     if (originalChars[i].toLowerCase() === typedChars[j].toLowerCase() && 
         originalChars[i] !== typedChars[j]) {
       errors.capitalization++;
@@ -792,7 +677,6 @@ const calculateDetailedErrors = (originalText, typedText) => {
       continue;
     }
     
-    // Check for punctuation errors
     if (isPunctuation(originalChars[i]) || isPunctuation(typedChars[j])) {
       errors.punctuation++;
       errors.total++;
@@ -801,11 +685,9 @@ const calculateDetailedErrors = (originalText, typedText) => {
       continue;
     }
     
-    // Default: substitution error
     errors.substitutions++;
     errors.total++;
     
-    // Track the specific error for pattern analysis
     const errorPair = `${originalChars[i]} → ${typedChars[j]}`;
     errors.common[errorPair] = (errors.common[errorPair] || 0) + 1;
     
@@ -813,7 +695,6 @@ const calculateDetailedErrors = (originalText, typedText) => {
     j++;
   }
   
-  // Word-level analysis
   const originalWords = originalText.split(/\s+/);
   const typedWords = typedText.split(/\s+/);
   
@@ -828,32 +709,26 @@ const calculateDetailedErrors = (originalText, typedText) => {
   return errors;
 };
 
-// Helper to identify punctuation
 const isPunctuation = (char) => {
   return /[.,\/#!$%\^&\*;:{}=\-_`~()'"]/g.test(char);
 };
 
-// Add these handler functions right after your existing functions but before the return statement
 
-// Prevent copying text from the paragraph
 const handleCopy = (e) => {
   e.preventDefault();
   return false;
 };
 
-// Prevent pasting into the input field
 const handlePaste = (e) => {
   e.preventDefault();
   return false;
 };
 
-// Prevent cutting from the input field
 const handleCut = (e) => {
   e.preventDefault();
   return false;
 };
 
-// Prevent right-click context menu
 const handleContextMenu = (e) => {
   e.preventDefault();
   return false;

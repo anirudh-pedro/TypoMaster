@@ -9,10 +9,8 @@ const LoginModal = ({ isOpen, onClose }) => {
   
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose}></div>
       
-      {/* Modal panel */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:w-full sm:max-w-sm sm:p-6">
           <div>
@@ -36,7 +34,6 @@ const LoginModal = ({ isOpen, onClose }) => {
               className="inline-flex w-full justify-center items-center rounded-md bg-white border border-gray-300 dark:bg-gray-700 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-700 dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600"
               onClick={() => navigate('/login')}
             >
-              {/* Google logo SVG */}
               <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"

@@ -4,10 +4,8 @@ const achievementController = require('../controllers/achievementController');
 const User = require('../models/User');
 const TestResult = require('../models/TestResult');
 
-// Get all achievements for a user
 router.get('/', achievementController.getUserAchievements);
 
-// Add a debug route to check test count
 router.get('/debug/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
@@ -40,8 +38,6 @@ router.get('/debug/:uid', async (req, res) => {
   }
 });
 
-// Make sure all routes have properly defined controller functions
 router.post('/process-test', achievementController.processTestResult);
 
-// Export the router
 module.exports = router;

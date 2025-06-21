@@ -11,7 +11,7 @@ const AnalyticsTab = ({ userId }) => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeChart, setActiveChart] = useState('wpm'); // 'wpm', 'accuracy', 'tests', or 'combined'
+  const [activeChart, setActiveChart] = useState('wpm'); 
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -37,11 +37,9 @@ const AnalyticsTab = ({ userId }) => {
     fetchAnalytics();
   }, [userId, period]);
 
-  // Format data for charts
   const formatChartData = (data) => {
     if (!data || !data.length) return [];
     
-    // Convert string values to numbers for charts
     return data.map(item => ({
       date: item.date,
       wpm: parseFloat(item.wpm),
@@ -84,10 +82,8 @@ const AnalyticsTab = ({ userId }) => {
 
   const { chartData, improvement, periodStats, timeStats } = analytics;
   
-  // Define totalTests from periodStats
   const totalTests = periodStats.totalTests || 0;
 
-  // Format data for charts
   const formattedChartData = formatChartData(chartData);
 
   return (
@@ -133,7 +129,6 @@ const AnalyticsTab = ({ userId }) => {
           </div>
         </div>
         
-        {/* Chart type selector */}
         <div className="mb-4 flex flex-wrap justify-center gap-2">
           <button 
             onClick={() => setActiveChart('wpm')}
@@ -177,7 +172,6 @@ const AnalyticsTab = ({ userId }) => {
           </button>
         </div>
         
-        {/* Dynamic Charts */}
         <div className="h-80 bg-white dark:bg-gray-800 rounded-lg">
           {formattedChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -276,7 +270,6 @@ const AnalyticsTab = ({ userId }) => {
                 </AreaChart>
               )}
               
-              {/* NEW CHART: Tests Completed */}
               {activeChart === 'tests' && (
                 <BarChart data={formattedChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
@@ -409,7 +402,6 @@ const AnalyticsTab = ({ userId }) => {
                 : 'Chart compares your speed and accuracy trends over time'}
         </div>
         
-        {/* Summary stats for the period */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
           <div className="bg-indigo-50 dark:bg-indigo-900/50 p-4 rounded-lg">
             <div className="flex items-center">
@@ -441,23 +433,9 @@ const AnalyticsTab = ({ userId }) => {
             </div>
           </div>
           
-          {/* <div className="bg-purple-50 dark:bg-purple-900/50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 mr-4">
-                <FaClock className="text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Practice Time</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{timeStats.totalTime} hrs</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Avg {timeStats.avgTimePerTest}s per test
-                </p>
-              </div>
-            </div>
-          </div> */}
+         
         </div>
         
-        {/* NEW: Tests frequency card */}
         {formattedChartData.length > 0 && (
           <div className="mt-6 bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg">
             <div className="flex items-center mb-2">
@@ -466,13 +444,7 @@ const AnalyticsTab = ({ userId }) => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Daily Average</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
-                  {(totalTests / (period === 'week' ? 7 : period === 'month' ? 30 : 365)).toFixed(1)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">tests per day</p>
-              </div> */}
+              
               
               <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Most Active Day</p>
@@ -495,7 +467,6 @@ const AnalyticsTab = ({ userId }) => {
           </div>
         )}
         
-        {/* Chart insight */}
         {formattedChartData.length > 0 && (
           <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center">
@@ -511,7 +482,6 @@ const AnalyticsTab = ({ userId }) => {
         )}
       </div>
       
-      {/* Performance trends table */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Trends</h3>
         

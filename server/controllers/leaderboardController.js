@@ -10,15 +10,12 @@ const { addClient } = require('../services/changeStreamService');
  */
 exports.getGlobalLeaderboard = async (req, res) => {
   try {
-    // Extract query parameters for pagination and filtering
     const { limit = 20, timeframe = 'all', page = 1, sort = 'wpm' } = req.query;
     const pageSize = parseInt(limit);
     const skip = (parseInt(page) - 1) * pageSize;
 
-    // Build query
     let query = {};
     
-    // Apply time filter if specified
     if (timeframe !== 'all') {
       const now = new Date();
       let startDate;
@@ -43,7 +40,6 @@ exports.getGlobalLeaderboard = async (req, res) => {
       }
     }
 
-    // Create aggregation pipeline
     const aggregationPipeline = [
       { $match: query },
       {
@@ -93,13 +89,10 @@ exports.getGlobalLeaderboard = async (req, res) => {
       }
     ];
 
-    // Execute the aggregation
     const results = await TestResult.aggregate(aggregationPipeline);
 
-    // Get total count for pagination
     const totalItems = await TestResult.countDocuments(query);
 
-    // Return the response
     res.status(200).json({
       success: true,
       data: results,
@@ -137,7 +130,6 @@ exports.getUserRanking = async (req, res) => {
       });
     }
 
-    // First find the user by Firebase UID
     const user = await User.findOne({ firebaseUid: userId });
     
     if (!user) {
@@ -147,7 +139,6 @@ exports.getUserRanking = async (req, res) => {
       });
     }
     
-    // Get user's best WPM score
     const bestResult = await TestResult.findOne({ 
       user: user._id 
     }).sort({ wpm: -1 });
@@ -161,7 +152,6 @@ exports.getUserRanking = async (req, res) => {
 
     const userBestWpm = bestResult.wpm;
 
-    // Count users with better WPM scores
     const rankingQuery = await TestResult.aggregate([
       { 
         $group: {
@@ -208,36 +198,29 @@ exports.getUserRanking = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.getRealTimeLeaderboard = async (req, res) => {
-  // Set headers for SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders(); // Flush the headers to establish SSE connection
+  res.flushHeaders(); 
 
-  // Register client for updates
   const clientId = addClient(req, res);
   
   console.log(`Client ${clientId} connected to leaderboard stream`);
 
-  // Send initial data
   sendInitialData(res);
 
-  // Send heartbeat every 30 seconds to keep connection alive
   const heartbeatId = setInterval(() => {
     res.write(`data: ${JSON.stringify({ type: 'heartbeat', time: new Date() })}\n\n`);
   }, 30000);
 
-  // When client disconnects, clear intervals
   req.on('close', () => {
     clearInterval(heartbeatId);
     console.log(`Client ${clientId} disconnected from leaderboard stream`);
   });
 };
 
-// Helper function to send initial leaderboard data
 async function sendInitialData(res) {
   try {
-    // Get initial top results
     const topResults = await TestResult.find()
       .sort({ wpm: -1 })
       .limit(20)
@@ -255,7 +238,6 @@ async function sendInitialData(res) {
       }
     }));
 
-    // Send initial data
     res.write(`data: ${JSON.stringify({ type: 'initial', data: formattedResults })}\n\n`);
   } catch (error) {
     console.error('Error sending initial data:', error);
@@ -273,16 +255,13 @@ exports.getDailyChallengeLeaderboard = async (req, res) => {
     const pageSize = parseInt(limit);
     const skip = (parseInt(page) - 1) * pageSize;
     
-    // Get today's date range
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    // Get achievement collection reference
     const Achievement = require('../models/Achievement');
     
-    // Find all users who completed the daily challenge today
     const todaysAchievements = await Achievement.find({
       'achievements.id': 'daily_test',
       'achievements.unlocked': true,
@@ -302,17 +281,14 @@ exports.getDailyChallengeLeaderboard = async (req, res) => {
       });
     }
     
-    // Get user IDs who completed daily challenge today
     const userIds = todaysAchievements.map(a => a.userId);
     
-    // Find users by their Firebase UIDs
     const users = await User.find({ firebaseUid: { $in: userIds } });
     const userMap = {};
     users.forEach(user => {
       userMap[user.firebaseUid] = user;
     });
     
-    // Get today's test results for these users
     const todaysTests = await TestResult.aggregate([
       {
         $match: {
@@ -334,7 +310,6 @@ exports.getDailyChallengeLeaderboard = async (req, res) => {
       { $limit: pageSize }
     ]);
     
-    // Map results to include user details
     const leaderboardData = await Promise.all(todaysTests.map(async (result) => {
       const user = await User.findById(result._id);
       return {
@@ -355,7 +330,6 @@ exports.getDailyChallengeLeaderboard = async (req, res) => {
       };
     }));
     
-    // Get total count
     const totalItems = todaysAchievements.length;
     
     res.status(200).json({
@@ -378,16 +352,13 @@ exports.getDailyChallengeLeaderboard = async (req, res) => {
   }
 };
 
-/**
- * Get all-time user rankings (based on average scores)
- */
+
 exports.getAllTimeUserRankings = async (req, res) => {
   try {
     const { limit = 20, page = 1 } = req.query;
     const pageSize = parseInt(limit);
     const skip = (parseInt(page) - 1) * pageSize;
     
-    // Get average WPM and accuracy for all users
     const userAverages = await TestResult.aggregate([
       {
         $group: {
@@ -400,7 +371,7 @@ exports.getAllTimeUserRankings = async (req, res) => {
       },
       {
         $match: {
-          testCount: { $gte: 3 } // Only include users with at least 3 tests
+          testCount: { $gte: 3 } 
         }
       },
       { $sort: { averageWpm: -1 } },
@@ -408,7 +379,6 @@ exports.getAllTimeUserRankings = async (req, res) => {
       { $limit: pageSize }
     ]);
     
-    // Map results to include user details
     const leaderboardData = await Promise.all(userAverages.map(async (result) => {
       const user = await User.findById(result._id);
       return {
@@ -429,7 +399,6 @@ exports.getAllTimeUserRankings = async (req, res) => {
       };
     }));
     
-    // Get total users count that have at least 3 tests
     const countPipeline = [
       {
         $group: {

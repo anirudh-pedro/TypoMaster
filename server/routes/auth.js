@@ -34,12 +34,10 @@ const verifyFirebaseToken = async (req, res, next) => {
   }
 };
 
-// POST /api/auth/firebase - Login with Firebase
 router.post('/firebase', verifyFirebaseToken, async (req, res) => {
   try {
     const { uid, email, name, picture } = req.user;
 
-    // Find or create user in database
     let user = await User.findOne({ firebaseUid: uid });
     
     if (!user) {
@@ -47,13 +45,12 @@ router.post('/firebase', verifyFirebaseToken, async (req, res) => {
         firebaseUid: uid,
         email: email,
         name: name || email.split('@')[0],
-        picture: picture || null // Make sure to save the picture
+        picture: picture || null 
       });
       await user.save();
     } else {
-      // Update user info including picture
       user.name = name || user.name;
-      user.picture = picture || user.picture; // Update picture if available
+      user.picture = picture || user.picture; 
       user.lastLogin = new Date();
       await user.save();
     }
@@ -65,8 +62,8 @@ router.post('/firebase', verifyFirebaseToken, async (req, res) => {
         uid: user.firebaseUid,
         email: user.email,
         name: user.name,
-        picture: user.picture, // Return the picture
-        photoURL: user.picture, // Also as photoURL for compatibility
+        picture: user.picture, 
+        photoURL: user.picture, 
         stats: user.stats,
         preferences: user.preferences
       }
@@ -77,19 +74,14 @@ router.post('/firebase', verifyFirebaseToken, async (req, res) => {
   }
 });
 
-// POST /api/auth/refresh - Refresh token
 router.post('/refresh', (req, res) => {
-  // For now, just return success - implement JWT refresh logic if needed
   res.json({ success: true, message: 'Token refreshed' });
 });
 
-// POST /api/auth/logout - Logout
 router.post('/logout', (req, res) => {
-  // Clear any server-side session data if needed
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// GET /api/auth/firebase-test - Test Firebase connection
 router.get('/firebase-test', (req, res) => {
   try {
     const isInitialized = admin.apps.length > 0;

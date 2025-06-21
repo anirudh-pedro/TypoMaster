@@ -125,10 +125,9 @@ router.get('/stats', verifyUser, async (req, res) => {
   }
 });
 
-// POST /api/dashboard/test-result - Save test result
 router.post('/test-result', async (req, res) => {
   try {
-    const { uid } = req.query; // Get Firebase UID from query
+    const { uid } = req.query; 
     
     console.log('Saving test result for user:', uid);
     console.log('Test data:', req.body);
@@ -140,7 +139,6 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // Find the user by Firebase UID
     const user = await User.findOne({ firebaseUid: uid });
     console.log('Found user:', user ? 'Yes' : 'No');
     
@@ -153,7 +151,6 @@ router.post('/test-result', async (req, res) => {
     
     const { wpm, accuracy, text, duration, errorCount, characters } = req.body;
 
-    // Enhanced validation
     if (!wpm || !accuracy || !text || !duration) {
       return res.status(400).json({
         success: false,
@@ -161,7 +158,6 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // Check for unrealistic combinations
     if (accuracy < 15 && wpm > 60) {
       return res.status(400).json({
         success: false,
@@ -169,7 +165,6 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // Check if errors exceed characters typed
     if (errorCount >= characters * 0.9) {
       return res.status(400).json({
         success: false,
@@ -177,14 +172,12 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // Enforce WPM limit based on accuracy
     let maxWpm = 220;
     if (accuracy < 50) {
-      maxWpm = 120; // Lower WPM limit for low accuracy
+      maxWpm = 120; 
     }
     const validatedWpm = Math.min(wpm, maxWpm);
     
-    // Create new test result with validated data
     const testResult = new TestResult({
       wpm: validatedWpm,
       accuracy,
@@ -209,7 +202,6 @@ router.post('/test-result', async (req, res) => {
     await testResult.save();
     console.log('Test result saved successfully');
     
-    // Try achievement checking with error handling
     let unlockedAchievements = [];
     try {
       if (typeof checkAchievements === 'function') {
@@ -219,7 +211,6 @@ router.post('/test-result', async (req, res) => {
       }
     } catch (achievementError) {
       console.error('Error checking achievements, but continuing:', achievementError);
-      // Don't fail the whole request
     }
     
     res.json({
@@ -245,7 +236,6 @@ router.post('/test-result', async (req, res) => {
   }
 });
 
-// GET /api/dashboard/history - Get user's test history
 router.get('/history', verifyUser, async (req, res) => {
   try {
     const user = req.user;
@@ -253,7 +243,6 @@ router.get('/history', verifyUser, async (req, res) => {
     
     const skip = (page - 1) * limit;
     
-    // Get test history with pagination
     const tests = await TestResult.find({ user: user._id })
       .sort({ date: -1 })
       .skip(skip)
@@ -299,13 +288,11 @@ router.get('/history', verifyUser, async (req, res) => {
   }
 });
 
-// GET /api/dashboard/analytics - Get analytics data
 router.get('/analytics', verifyUser, async (req, res) => {
   try {
     const user = req.user;
     const { period = 'month' } = req.query;
     
-    // Get date range based on period
     const startDate = new Date();
     if (period === 'week') {
       startDate.setDate(startDate.getDate() - 7);
@@ -315,13 +302,11 @@ router.get('/analytics', verifyUser, async (req, res) => {
       startDate.setFullYear(startDate.getFullYear() - 1);
     }
     
-    // Get all tests within period
     const tests = await TestResult.find({
       user: user._id,
       date: { $gte: startDate }
     }).sort({ date: 1 });
     
-    // Calculate daily averages
     const dailyData = {};
     tests.forEach(test => {
       const day = test.date.toISOString().split('T')[0];
@@ -339,7 +324,6 @@ router.get('/analytics', verifyUser, async (req, res) => {
       dailyData[day].tests++;
     });
     
-    // Format data for frontend charts
     const chartData = Object.keys(dailyData).map(day => {
       const data = dailyData[day];
       const avgWpm = data.wpm.reduce((sum, val) => sum + val, 0) / data.wpm.length;
@@ -353,7 +337,6 @@ router.get('/analytics', verifyUser, async (req, res) => {
       };
     });
     
-    // Calculate improvement metrics
     let improvement = 0;
     if (chartData.length >= 2) {
       const firstTests = chartData.slice(0, Math.min(3, chartData.length)).map(d => parseFloat(d.wpm));
@@ -365,9 +348,8 @@ router.get('/analytics', verifyUser, async (req, res) => {
       improvement = ((lastAvg - firstAvg) / firstAvg * 100).toFixed(1);
     }
     
-    // Calculate time distribution (e.g., time spent per day)
     const timeStats = {
-      totalTime: (user.stats.totalTime / 60).toFixed(1), // Convert to hours
+      totalTime: (user.stats.totalTime / 60).toFixed(1), 
       avgTimePerTest: (user.stats.totalTime / user.stats.testsCompleted).toFixed(1),
       testsPerDay: tests.length > 0 ? (tests.length / (period === 'week' ? 7 : period === 'month' ? 30 : 365)).toFixed(1) : 0
     };

@@ -11,15 +11,14 @@ require('dotenv').config();
 const app = express();
 const { initChangeStreams } = require('./services/changeStreamService');
 
-// Updated CORS configuration to handle both development servers
 const corsOptions = {
   origin: [
-    'http://localhost:3000',  // Create React App default
-    'http://localhost:5173',  // Vite default
+    'http://localhost:3000',  
+    'http://localhost:5173',  
     'http://localhost:4173', 
     'https://typo-master-alpha.vercel.app',
-    process.env.CLIENT_URL    // Custom client URL from environment
-  ].filter(Boolean), // Remove any undefined values
+    process.env.CLIENT_URL    
+  ].filter(Boolean), 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
@@ -30,21 +29,18 @@ app.use(express.json());
 app.use(helmet());
 app.use(compression());
 
-// Rate limiting
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
   message: 'Too many requests from this IP, please try again later'
 });
 app.use('/api/', apiLimiter);
 
-// Add this middleware for debugging CORS issues
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
   next();
 });
 
-// Routes - wrap in try-catch to handle missing files
 try {
   const authRoutes = require('./routes/auth');
   app.use('/api/auth', authRoutes);
@@ -73,11 +69,9 @@ try {
   console.error('Error loading leaderboard routes:', error.message);
 }
 
-// Add this to your existing routes
 const achievementRoutes = require('./routes/achievement');
 app.use('/api/achievements', achievementRoutes);
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -88,7 +82,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Connect to MongoDB
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/typomaster';
@@ -100,7 +93,6 @@ const connectDB = async () => {
   }
 };
 
-// Replace your existing static file serving code with this:
 app.get('/', (req, res) => {
   res.json({ 
     message: 'TypoMaster API is running', 
@@ -115,20 +107,17 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
 
-// Start server
 const startServer = async () => {
   try {
     await connectDB();
@@ -144,14 +133,12 @@ const startServer = async () => {
   }
 };
 
-// This schedules a job to run at 12:01 AM every day
 cron.schedule('1 0 * * *', async () => {
   try {
     console.log('Running daily achievement reset job...');
     
     const Achievement = require('./models/Achievement');
     
-    // Reset all daily challenges in one operation
     const result = await Achievement.updateMany(
       { 'achievements.id': 'daily_test' },
       { 
@@ -169,15 +156,13 @@ cron.schedule('1 0 * * *', async () => {
   }
 }, {
   scheduled: true,
-  timezone: "UTC" // Set your application's timezone
+  timezone: "UTC"
 });
 
-// Add startup check for any stale daily challenges
 mongoose.connection.once('open', async () => {
   console.log('MongoDB connected');
   await initChangeStreams();
   
-  // Check for stale daily challenges on startup
   try {
     const Achievement = require('./models/Achievement');
     const today = new Date();
