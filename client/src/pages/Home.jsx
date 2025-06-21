@@ -86,10 +86,10 @@ const Home = () => {
       description: "Monitor your progress over time with detailed statistics and personalized insights."
     },
     {
-      icon: <FaTrophy className="h-12 w-12 text-indigo-500" />,
-      title: "Global Leaderboard",
-      description: "Compete with typists from around the world and climb the ranks as you improve."
-    }
+  icon: <FaChartLine className="h-12 w-12 text-indigo-500" />,
+  title: "Personalized Analytics",
+  description: "Visualize your growth with interactive charts that identify patterns in your typing, highlighting strengths and areas for improvement."
+}
   ];
 
   const testimonials = [
