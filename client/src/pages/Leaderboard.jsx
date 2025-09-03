@@ -100,9 +100,7 @@ const Leaderboard = () => {
             <FaTrophy className="inline-block mr-3 text-yellow-500" />
             Leaderboard
           </h1>
-          <p className="text-lg text-gray-600">
-            Overall performance rankings - each user appears once with their complete statistics
-          </p>
+          
         </div>
 
         {/* Filters */}
@@ -153,9 +151,7 @@ const Leaderboard = () => {
             <h2 className="text-xl font-semibold text-gray-900">
               {getTimeframeLabel(timeframe)} - {getCategoryLabel(category)}
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Showing overall averages across all tests for each user
-            </p>
+            
           </div>
 
           {leaderboardData.length === 0 ? (
@@ -251,7 +247,7 @@ const Leaderboard = () => {
 
         {/* Footer Info */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p><strong>Overall Performance Leaderboard:</strong> Each user appears once with their complete statistics</p>
+
           <p className="mt-1">
             Rankings based on {category === 'wpm' ? 'average typing speed' : category === 'best-wpm' ? 'best typing speed' : category === 'accuracy' ? 'average accuracy' : category === 'best-accuracy' ? 'best accuracy' : 'number of tests completed'}
           </p>
