@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaKeyboard, FaUser, FaChartLine, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
-import { AppContext } from "../App";
+import { useAppContext } from "../App";
 import LoginModal from './LoginModal';
 
 const Nav = () => {
@@ -13,7 +13,7 @@ const Nav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  const { user, logout } = useContext(AppContext) || {};
+  const { user, logout } = useAppContext();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -92,12 +92,12 @@ const Nav = () => {
 
   return (
     <>
-      <nav className="fixed w-full z-10 bg-white dark:bg-gray-800 shadow-md">
+      <nav className="fixed w-full z-10 bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
               <FaKeyboard className="h-6 w-6 text-indigo-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
+              <span className="ml-2 text-xl font-bold text-gray-900">
                 TypoMaster
               </span>
               
@@ -105,19 +105,27 @@ const Nav = () => {
                 <Link 
                   to="/" 
                   className={location.pathname === '/' 
-                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
+                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700" 
+                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"}
                 >
                   Home
                 </Link>
                 <Link 
                   to="/test" 
                   className={location.pathname === '/test' 
-                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
+                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700" 
+                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"}
                   onClick={handleTestClick} 
                 >
                   Typing Test
+                </Link>
+                <Link 
+                  to="/leaderboard" 
+                  className={location.pathname === '/leaderboard' 
+                    ? "px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-700" 
+                    : "px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"}
+                >
+                  Leaderboard
                 </Link>
                 
               </div>
@@ -134,7 +142,7 @@ const Nav = () => {
                     aria-haspopup="true"
                     aria-expanded={profileMenuOpen}
                   >
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-medium border border-indigo-200 dark:border-indigo-800">
+                    <div className="h-8 w-8 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium border border-indigo-200">
                       {user.picture ? (
                         <img
                           src={user.picture}
@@ -157,20 +165,20 @@ const Nav = () => {
                   {profileMenuOpen && (
                     <div 
                       id="profile-dropdown"
-                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5"
+                      className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5"
                     >
-                      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">
                           {user?.name || user?.displayName || user?.email?.split('@')[0] || 'User'}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-xs text-gray-500 truncate">
                           {user?.email || ''}
                         </p>
                       </div>
                       
                       <Link
                         to="/dashboard"
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setProfileMenuOpen(false)}
                       >
                         <FaChartLine className="inline-block mr-2" />
@@ -179,7 +187,7 @@ const Nav = () => {
                       
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <FaSignOutAlt className="inline-block mr-2" />
                         Sign out
@@ -200,7 +208,7 @@ const Nav = () => {
               <div className="sm:hidden ml-3">
                 <button
                   onClick={() => setIsOpen(!isOpen)}
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700"
                   aria-expanded={isOpen}
                 >
                   <span className="sr-only">Open main menu</span>
@@ -221,8 +229,8 @@ const Nav = () => {
               <Link
                 to="/"
                 className={location.pathname === '/' 
-                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
+                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"}
                 onClick={() => setIsOpen(false)}
               >
                 Home
@@ -230,8 +238,8 @@ const Nav = () => {
               <Link
                 to="/test"
                 className={location.pathname === '/test' 
-                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
+                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"}
                 onClick={(e) => {
                   setIsOpen(false);
                   handleTestClick(e);
@@ -239,13 +247,22 @@ const Nav = () => {
               >
                 Typing Test
               </Link>
+              <Link
+                to="/leaderboard"
+                className={location.pathname === '/leaderboard' 
+                  ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"}
+                onClick={() => setIsOpen(false)}
+              >
+                Leaderboard
+              </Link>
               
               {user && (
                 <Link
                   to="/dashboard"
                   className={location.pathname === '/dashboard' 
-                    ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200" 
-                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}
+                    ? "block px-3 py-2 rounded-md text-base font-medium bg-indigo-100 text-indigo-700" 
+                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"}
                   onClick={() => setIsOpen(false)}
                 >
                   Dashboard

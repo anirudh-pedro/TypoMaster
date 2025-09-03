@@ -14,7 +14,8 @@ exports.getGlobalLeaderboard = async (req, res) => {
     const pageSize = parseInt(limit);
     const skip = (parseInt(page) - 1) * pageSize;
 
-    let query = {};
+    // Build time filter for user activity
+    let userTimeFilter = {};
     
     if (timeframe !== 'all') {
       const now = new Date();
@@ -22,7 +23,9 @@ exports.getGlobalLeaderboard = async (req, res) => {
       
       switch(timeframe) {
         case 'day':
-          startDate = new Date(now.setDate(now.getDate() - 1));
+        case 'today':
+          startDate = new Date(now);
+          startDate.setHours(0, 0, 0, 0);
           break;
         case 'week':
           startDate = new Date(now.setDate(now.getDate() - 7));
@@ -36,62 +39,73 @@ exports.getGlobalLeaderboard = async (req, res) => {
       }
       
       if (startDate) {
-        query.date = { $gte: startDate };
+        userTimeFilter.lastLogin = { $gte: startDate };
       }
     }
 
-    const aggregationPipeline = [
-      { $match: query },
-      {
-        $sort: sort === 'wpm' ? { wpm: -1 } : 
-               sort === 'accuracy' ? { accuracy: -1 } : 
-               { date: -1 }
-      },
-      { $skip: skip },
-      { $limit: pageSize },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'userDetails'
-        }
-      },
-      {
-        $addFields: {
-          userInfo: {
-            $cond: {
-              if: { $gt: [{ $size: '$userDetails' }, 0] },
-              then: {
-                name: { $arrayElemAt: ['$userDetails.name', 0] },
-                picture: { $arrayElemAt: ['$userDetails.picture', 0] },
-                firebaseUid: { $arrayElemAt: ['$userDetails.firebaseUid', 0] }
-              },
-              else: {
-                name: 'Anonymous',
-                picture: null,
-                firebaseUid: null
-              }
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          wpm: 1,
-          accuracy: 1,
-          errorCount: 1,
-          date: 1,
-          text: { $substr: ["$text", 0, 50] },
-          userInfo: 1
-        }
-      }
-    ];
+    // Build sort criteria based on User model stats
+    let sortField;
+    switch(sort) {
+      case 'wpm':
+      case 'avg-wpm':
+        sortField = { 'stats.avgWpm': -1 };
+        break;
+      case 'best-wpm':
+        sortField = { 'stats.bestWpm': -1 };
+        break;
+      case 'accuracy':
+        sortField = { 'stats.avgAccuracy': -1 };
+        break;
+      case 'best-accuracy':
+        sortField = { 'stats.bestAccuracy': -1 };
+        break;
+      case 'tests':
+        sortField = { 'stats.testsCompleted': -1 };
+        break;
+      default:
+        sortField = { 'stats.avgWpm': -1 };
+    }
 
-    const results = await TestResult.aggregate(aggregationPipeline);
+    // Query users directly with their overall stats
+    const User = require('../models/User');
+    
+    const users = await User.find({
+      ...userTimeFilter,
+      'stats.testsCompleted': { $gt: 0 } // Only show users who have completed tests
+    })
+    .select('name picture stats lastLogin firebaseUid')
+    .sort(sortField)
+    .limit(pageSize)
+    .skip(skip)
+    .lean();
 
-    const totalItems = await TestResult.countDocuments(query);
+    // Format results to match expected structure
+    const results = users.map((user) => ({
+      _id: user._id,
+      userInfo: {
+        name: user.name,
+        picture: user.picture,
+        firebaseUid: user.firebaseUid
+      },
+      // Overall averages from user stats
+      avgWpm: Math.round(user.stats.avgWpm * 10) / 10,
+      bestWpm: user.stats.bestWpm,
+      avgAccuracy: Math.round(user.stats.avgAccuracy * 10) / 10,
+      bestAccuracy: Math.round(user.stats.bestAccuracy * 10) / 10,
+      testsCompleted: user.stats.testsCompleted,
+      lastTestDate: user.lastLogin,
+      totalCharacters: user.stats.totalCharacters,
+      // For backward compatibility
+      wpm: user.stats.avgWpm,
+      accuracy: user.stats.avgAccuracy,
+      date: user.lastLogin
+    }));
+
+    // Get total count of users with tests
+    const totalItems = await User.countDocuments({
+      ...userTimeFilter,
+      'stats.testsCompleted': { $gt: 0 }
+    });
 
     res.status(200).json({
       success: true,

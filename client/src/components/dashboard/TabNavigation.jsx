@@ -63,9 +63,9 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
   }, []);
 
   return (
-    <div className="relative border-b border-gray-200 dark:border-gray-700 mb-8">
+    <div className="relative border-b border-gray-200 mb-8">
       {canScrollLeft && (
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
       )}
       
       <div 
@@ -85,8 +85,8 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
               id={`${tab.id}-tab-button`}
               className={`pb-3 px-4 flex-shrink-0 flex items-center transition-colors duration-200 ${
                 activeTab === tab.id 
-                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' 
-                : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                ? 'border-b-2 border-indigo-500 text-indigo-600' 
+                : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -98,7 +98,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
       </div>
       
       {canScrollRight && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
       )}
       
       <style jsx="true">{`

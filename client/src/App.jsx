@@ -7,6 +7,8 @@ import TypingTest from './pages/TypingTest';
 import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
+import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -43,10 +45,8 @@ const AppProvider = ({ children }) => {
     try {
       if (user) {
         localStorage.setItem('typomaster_user', JSON.stringify(user));
-        console.log('User saved to localStorage:', user);
       } else {
         localStorage.removeItem('typomaster_user');
-        console.log('User removed from localStorage');
       }
     } catch (error) {
       console.error('Error saving user to localStorage:', error);
@@ -55,14 +55,11 @@ const AppProvider = ({ children }) => {
 
   // Function to update user
   const updateUser = (userData) => {
-    console.log('updateUser called with:', userData);
     setUser(userData);
-    localStorage.setItem('typomaster_user', JSON.stringify(userData));
   };
 
   // Function to logout user
   const logout = () => {
-    console.log('Logging out user');
     setUser(null);
     localStorage.removeItem('typomaster_user');
   };
@@ -70,6 +67,23 @@ const AppProvider = ({ children }) => {
   // Add achievements to notification system
   const addAchievementNotifications = (achievements) => {
     setAchievementNotifications(achievements);
+    
+    // Show toast notifications for new achievements
+    achievements.forEach(achievement => {
+      import('react-toastify').then(({ toast }) => {
+        toast.success(
+          `🏆 Achievement Unlocked: ${achievement.title}`,
+          {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+      });
+    });
     
     // Clear notifications after 10 seconds
     setTimeout(() => {
@@ -133,6 +147,8 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
+        {/* Catch-all route for 404 pages */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );
@@ -140,29 +156,26 @@ const AppContent = () => {
 
 // Main App Component
 const App = () => {
-  // Define user state at the top level so both Nav and Dashboard can access it
-  const [user, setUser] = useState(null);
-  const [achievementNotifications, setAchievementNotifications] = useState([]);
-  
-  // In your AppContext.Provider, include user and setUser
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <AppContent />
-        <ToastContainer 
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored" // or "light" or "dark"
-        />
-      </BrowserRouter>
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <BrowserRouter>
+          <AppContent />
+          <ToastContainer 
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={true}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
+        </BrowserRouter>
+      </AppProvider>
+    </ErrorBoundary>
   );
 };
 

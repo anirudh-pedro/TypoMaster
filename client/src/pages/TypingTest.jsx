@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { FaRedo, FaClock, FaKeyboard, FaTachometerAlt, FaCheck, FaSave, FaSpinner, FaDatabase } from 'react-icons/fa';
-import { AppContext } from '../App';
+import { useAppContext } from '../App';
 import { dashboardService } from '../services/api';
 import axios from 'axios';
 import LoginModal from '../components/LoginModal';
@@ -19,8 +19,22 @@ const paragraphs = [
   "The Internet is a global network of billions of computers and other electronic devices. With the Internet, it's possible to access almost any information, communicate with anyone else in the world, and do much more. You can do all this by connecting a computer to the Internet. The history of the Internet dates back to the 1960s when researchers developed ARPANET, the first network to implement TCP/IP. This protocol suite continues to be the foundation of the modern Internet. The World Wide Web, often confused with the Internet itself, is actually just one service that runs on the Internet. Tim Berners-Lee invented the web in 1989 while working at CERN. He created HTML, HTTP, and the concept of URLs, which together formed the foundation of the web as we know it today. The Internet has transformed nearly every aspect of modern life. It enables new forms of commerce, entertainment, social interaction, and learning. The rise of cloud computing has further expanded the Internet's capabilities, allowing users to access powerful computing resources and store vast amounts of data remotely. As the Internet continues to evolve, emerging technologies like 5G, IoT, and edge computing promise to create new opportunities and challenges."
 ];
 
+// Utility function for consistent WPM calculation
+const calculateWPM = (inputText, elapsedMinutes, accuracy) => {
+  // Ensure minimum time to prevent division by zero and handle edge cases
+  const minTime = Math.max(elapsedMinutes, 0.1); // Minimum 6 seconds (0.1 minutes)
+  
+  // Use actual word count instead of character length / 5
+  const words = inputText.trim().split(/\s+/).filter(word => word.length > 0);
+  const grossWPM = words.length / minTime;
+  const netWPM = grossWPM * (accuracy / 100);
+  
+  // Cap at reasonable maximum WPM (world record is ~220 WPM)
+  return Math.min(Math.floor(netWPM), 250);
+};
+
 const TypingTest = () => {
-  const { user } = useContext(AppContext) || {}; 
+  const { user } = useAppContext(); 
   const [paragraph, setParagraph] = useState('');
   const [input, setInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(60);
@@ -44,12 +58,17 @@ const TypingTest = () => {
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       const interval = setInterval(() => {
-        setTimeLeft(time => time - 1);
+        setTimeLeft(time => {
+          if (time <= 1) {
+            setIsActive(false);
+            endTest(); // Call endTest when timer reaches 0
+            return 0;
+          }
+          return time - 1;
+        });
       }, 1000);
       
       return () => clearInterval(interval);
-    } else if (timeLeft === 0 && isActive) {
-      endTest();
     }
   }, [isActive, timeLeft]);
   
@@ -131,8 +150,8 @@ const detectInvalidTypingPattern = (input) => {
   const handleInputChange = (e) => {
     const value = e.target.value;
     
-    
-    if (value.length > input.length + 10) {
+    // Prevent large paste operations
+    if (value.length > input.length + 5) {
       return;
     }
     
@@ -140,24 +159,28 @@ const detectInvalidTypingPattern = (input) => {
       setIsActive(true);
     }
     
-    if (isLegitimateTyping(value) || value.length <= 1) {
+    // Always allow backspace/deletion
+    if (value.length <= input.length) {
       setInput(value);
-      
-      const words = paragraph.split(' ');
-      const inputWords = value.split(' ').filter(word => word.length > 0); 
-      setCurrentWordIndex(inputWords.length - 1);
-      
-      const detailedErrors = calculateDetailedErrors(paragraph.substring(0, value.length), value);
-      setErrors(detailedErrors.total);
     } else {
-      // Optionally alert the user about invalid input
-      // But don't update the input state
+      // For new characters, validate typing pattern
+      if (isLegitimateTyping(value) || value.length <= 2) {
+        setInput(value);
+      }
     }
     
-    if (paragraphContainerRef.current) {
+    const words = paragraph.split(' ');
+    const inputWords = value.split(' ').filter(word => word.length > 0); 
+    setCurrentWordIndex(Math.max(0, inputWords.length - 1));
+    
+    const detailedErrors = calculateDetailedErrors(paragraph.substring(0, value.length), value);
+    setErrors(detailedErrors.total);
+    
+    // Auto-scroll functionality
+    if (paragraphContainerRef.current && value.length > 0) {
       const spans = paragraphContainerRef.current.querySelectorAll('span');
       
-      if (value.length > 0 && spans[value.length]) {
+      if (spans[value.length]) {
         const currentSpan = spans[value.length];
         const containerRect = paragraphContainerRef.current.getBoundingClientRect();
         const spanRect = currentSpan.getBoundingClientRect();
@@ -182,47 +205,35 @@ const detectInvalidTypingPattern = (input) => {
     const chars = inputText.length;
     
     const detailedErrors = calculateDetailedErrors(paragraphText, inputText);
-    
     const accuracy = Math.max(0, Math.floor(((chars - detailedErrors.total) / chars) * 100)) || 0;
     
     const isInvalidPattern = detectInvalidTypingPattern(inputText);
     
-    const minutes = (60 - timeLeft) / 60;
+    // Calculate elapsed time properly
+    const elapsedSeconds = 60 - timeLeft;
+    const minutes = elapsedSeconds / 60;
     
-    const standardWordLength = 5; 
-    let wpm;
+    // Ensure we have a reasonable minimum time for calculation
+    const effectiveMinutes = Math.max(minutes, 0.1); // At least 6 seconds
     
-    if (isInvalidPattern || accuracy < 15) {
-      wpm = Math.floor((chars / standardWordLength) * accuracy / 100 / minutes) || 0;
-    } else {
-      const realWords = inputText.split(' ').filter(word => word.length >= 2);
-      
-      if (realWords.length > 5) {
-        wpm = Math.floor(realWords.length / minutes) || 0;
-      } else {
-        wpm = Math.floor((chars / standardWordLength) / minutes) || 0;
-      }
-    }
-    
-    const maxReasonableWPM = 220;
-    const finalWPM = Math.min(wpm, maxReasonableWPM);
+    // Use consistent WPM calculation
+    const wpm = calculateWPM(inputText, effectiveMinutes, accuracy);
     
     const resultData = {
-      wpm: finalWPM,
+      wpm,
       accuracy, 
       errors: detailedErrors.total,
       errorDetails: detailedErrors,
       charsTyped: chars,
       correctChars: chars - detailedErrors.total,
-      time: 60 - timeLeft,
+      time: elapsedSeconds,
       text: paragraph,
       invalidPattern: isInvalidPattern,
       date: new Date().toISOString()
     };
     
+    console.log('Test results:', resultData); // Debug log
     setResults(resultData);
-    
-   
   };
   
   const saveResultToDatabase = async () => {
@@ -238,12 +249,12 @@ const detectInvalidTypingPattern = (input) => {
       return;
     }
     
-    if (results.accuracy < 15) {
+    if (results.accuracy < 10) {
       setSaveError("Accuracy is too low. Please try again with more careful typing.");
       return;
     }
     
-    if (results.errors > results.charsTyped * 0.7) {
+    if (results.errors > results.charsTyped * 0.8) {
       setSaveError("Too many errors compared to text length. Please try again.");
       return;
     }
@@ -267,8 +278,22 @@ const detectInvalidTypingPattern = (input) => {
       if (response.success) {
         setSaveSuccess(true);
         
+        // Show success toast for test submission
+        const { toast } = await import('react-toastify');
+        toast.success(
+          "Test submitted successfully!",
+          {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+        
         setTimeout(() => {
-          navigate('/dashboard?tab=achievements&refresh=true');
+          navigate('/dashboard');
         }, 1500);
       } else {
         setSaveError(response.message || 'Failed to save your results. Please try again.');
@@ -288,6 +313,27 @@ const detectInvalidTypingPattern = (input) => {
   
   const saveAndContinue = () => {
     getRandomParagraph();
+  };
+
+  // Prevent cheating through copy/paste
+  const handlePaste = (e) => {
+    e.preventDefault();
+    return false;
+  };
+
+  const handleCopy = (e) => {
+    e.preventDefault();
+    return false;
+  };
+
+  const handleCut = (e) => {
+    e.preventDefault();
+    return false;
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    return false;
   };
   
 
@@ -316,37 +362,37 @@ const detectInvalidTypingPattern = (input) => {
   const formattedLines = useMemo(() => formatParagraphLines(paragraph), [paragraph]);
   
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50">
       <Nav />
       
       <div className="max-w-4xl mx-auto pt-20 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
           {results ? 'Your Results' : 'Typing Test'}
         </h1>
         
         {!results ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 flex justify-between items-center">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-gray-100 p-4 flex justify-between items-center">
               <div className="flex items-center">
-                <FaClock className="text-indigo-600 dark:text-indigo-400 mr-2" />
-                <span className={`font-mono text-lg font-bold ${timeLeft <= 10 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                <FaClock className="text-indigo-600 mr-2" />
+                <span className={`font-mono text-lg font-bold ${timeLeft <= 10 ? 'text-red-600' : 'text-gray-700'}`}>
                   {timeLeft}s
                 </span>
               </div>
               
               <button 
                 onClick={getRandomParagraph}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors"
               >
                 <FaRedo className="mr-1" /> New Text
               </button>
             </div>
             
-            <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-3 border-b border-gray-200">
               <div className="mb-3">
                 <div 
                   ref={paragraphContainerRef}
-                  className="font-mono text-md border-2 rounded-lg p-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 overflow-y-auto overflow-x-hidden"
+                  className="font-mono text-md border-2 rounded-lg p-4 bg-white border-gray-300 overflow-y-auto overflow-x-hidden"
                   style={{ 
                     height: "240px",
                     maxHeight: "50vh",
@@ -367,13 +413,13 @@ const detectInvalidTypingPattern = (input) => {
                       
                       if (index < input.length) {
                         if (char === input[index]) {
-                          textColor = 'text-green-600 dark:text-green-400';
+                          textColor = 'text-green-600';
                         } else {
-                          textColor = 'text-red-600 dark:text-red-400';
-                          bgColor = 'bg-red-100 dark:bg-red-900/30';
+                          textColor = 'text-red-600';
+                          bgColor = 'bg-red-100';
                         }
                       } else if (index === input.length) {
-                        bgColor = 'bg-gray-200 dark:bg-gray-600'; 
+                        bgColor = 'bg-gray-200'; 
                         cursorClass = 'cursor-position';
                       }
                       
@@ -396,13 +442,13 @@ const detectInvalidTypingPattern = (input) => {
               </div>
               
               <div className="mb-4">
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
                   <div
                     className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${(input.length / paragraph.length) * 100}%` }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex justify-between text-xs text-gray-600">
                   <span>{Math.round((input.length / paragraph.length) * 100)}% complete</span>
                   <span>{input.length}/{paragraph.length} characters</span>
                 </div>
@@ -419,7 +465,7 @@ const detectInvalidTypingPattern = (input) => {
                 onCut={handleCut}
                 onContextMenu={handleContextMenu}
                 placeholder="Start typing here..."
-                className="w-full h-24 p-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono resize-none"
+                className="w-full h-24 p-4 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 font-mono resize-none"
                 disabled={timeLeft === 0}
                 autoComplete="off"
                 autoCorrect="off"
@@ -429,107 +475,113 @@ const detectInvalidTypingPattern = (input) => {
               />
               
               <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md text-center">
-                  <div className="flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-1">
+                <div className="bg-gray-100 p-3 rounded-md text-center">
+                  <div className="flex items-center justify-center text-indigo-600 mb-1">
                     <FaTachometerAlt className="mr-1" />
                     <span className="text-xs uppercase font-semibold">Speed</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                    {isActive 
-                      ? Math.floor((input.split(' ').filter(word => word.length > 0).length / ((60 - timeLeft) / 60)) || 0) 
+                  <span className="text-xl font-bold text-gray-800">
+                    {isActive && input.length > 0
+                      ? (() => {
+                          const elapsed = (60 - timeLeft) / 60;
+                          const currentAccuracy = input.length > 0 
+                            ? Math.max(0, Math.floor(((input.length - errors) / input.length) * 100)) 
+                            : 100;
+                          return calculateWPM(input, elapsed, currentAccuracy);
+                        })()
                       : 0} WPM
                   </span>
                 </div>
                 
-                <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md text-center">
-                  <div className="flex items-center justify-center text-green-600 dark:text-green-400 mb-1">
+                <div className="bg-gray-100 p-3 rounded-md text-center">
+                  <div className="flex items-center justify-center text-green-600 mb-1">
                     <FaCheck className="mr-1" />
                     <span className="text-xs uppercase font-semibold">Accuracy</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  <span className="text-xl font-bold text-gray-800">
                     {input.length > 0 
                       ? Math.max(0, Math.floor(((input.length - errors) / input.length) * 100)) 
                       : 100}%
                   </span>
                 </div>
                 
-                <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md text-center">
-                  <div className="flex items-center justify-center text-red-600 dark:text-red-400 mb-1">
+                <div className="bg-gray-100 p-3 rounded-md text-center">
+                  <div className="flex items-center justify-center text-red-600 mb-1">
                     <span className="text-xs uppercase font-semibold">Errors</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  <span className="text-xl font-bold text-gray-800">
                     {errors}
                   </span>
                 </div>
               </div>
             </div>
             
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="bg-gray-50 p-4 text-center text-sm text-gray-500">
               {isActive 
                 ? "Keep typing! Your time will automatically end after 60 seconds."
                 : "Start typing to begin the test. You'll have 60 seconds to type as much as you can."}
             </div>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center h-24 w-24 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-4">
+                <div className="inline-flex items-center justify-center h-24 w-24 rounded-full bg-indigo-100 text-indigo-600 mb-4">
                   <FaKeyboard className="h-12 w-12" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Test Complete!</h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <h2 className="text-2xl font-bold text-gray-900">Test Complete!</h2>
+                <p className="text-gray-600 mt-1">
                   Here's how you did:
                 </p>
               </div>
               
               <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg text-center">
-                  <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <div className="text-4xl font-bold text-indigo-600">
                     {results.wpm}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide font-semibold mt-1">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide font-semibold mt-1">
                     Words Per Minute
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg text-center">
-                  <div className="text-4xl font-bold text-green-600 dark:text-green-400">
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <div className="text-4xl font-bold text-green-600">
                     {results.accuracy}%
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide font-semibold mt-1">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide font-semibold mt-1">
                     Accuracy
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg text-center">
-                  <div className="text-4xl font-bold text-gray-700 dark:text-gray-300">
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <div className="text-4xl font-bold text-gray-700">
                     {results.charsTyped}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide font-semibold mt-1">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide font-semibold mt-1">
                     Characters Typed
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg text-center">
-                  <div className="text-4xl font-bold text-red-600 dark:text-red-400">
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <div className="text-4xl font-bold text-red-600">
                     {results.errors}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide font-semibold mt-1">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide font-semibold mt-1">
                     Errors
                   </div>
                 </div>
               </div>
               
               <div className="mb-8 text-center">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {results.wpm < 30 
                     ? "Keep practicing!" 
                     : results.wpm < 60 
                       ? "Good job!" 
                       : "Excellent typing!"}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600">
                   {results.wpm < 30 
                     ? "Your typing speed is below average. Regular practice will help you improve." 
                     : results.wpm < 60 
@@ -560,7 +612,7 @@ const detectInvalidTypingPattern = (input) => {
                 )}
                 
                 {saveError && (
-                  <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-400">
+                  <div className="mt-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700">
                     <p className="font-medium">Error!</p>
                     <p>{saveError}</p>
                     <p className="text-sm mt-1">Please try again or contact support if the problem persists.</p>
@@ -568,8 +620,8 @@ const detectInvalidTypingPattern = (input) => {
                 )}
                 
                 {saveSuccess && (
-                  <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-md text-center border-l-4 border-green-500">
-                    <p className="text-green-800 dark:text-green-300 font-medium">
+                  <div className="p-4 bg-green-100 rounded-md text-center border-l-4 border-green-500">
+                    <p className="text-green-800 font-medium">
                       Results saved successfully! Redirecting to dashboard...
                     </p>
                   </div>
@@ -588,13 +640,13 @@ const detectInvalidTypingPattern = (input) => {
               </div>
               
               {!user && (
-                <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-md text-center">
-                  <p className="text-indigo-800 dark:text-indigo-300 mb-2">
+                <div className="mt-8 p-4 bg-indigo-50 rounded-md text-center">
+                  <p className="text-indigo-800 mb-2">
                     Want to save your results and track your progress?
                   </p>
                   <button 
                     onClick={() => navigate('/login')}
-                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-500"
+                    className="text-indigo-600 font-semibold hover:text-indigo-500"
                   >
                     Log in or Sign up
                   </button>

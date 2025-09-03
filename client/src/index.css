@@ -1,4 +1,15 @@
 @import "tailwindcss";
+
+/* Force light theme */
+html {
+  color-scheme: light only;
+}
+
+body {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
 @keyframes fade-in-down {
   from {
     opacity: 0;

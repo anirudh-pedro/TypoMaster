@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 
 const AnalyticsTab = ({ userId }) => {
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState('month'); // Changed back to 'month' for production compatibility
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,20 +15,51 @@ const AnalyticsTab = ({ userId }) => {
 
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setError('User ID not available');
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
+      setError(null);
+      
       try {
-        const response = await dashboardService.getAnalytics(userId, period);
-        if (response.success) {
+        console.log('Fetching analytics for userId:', userId);
+        console.log('Period:', period);
+        
+        let response = await dashboardService.getAnalytics(userId, period);
+        console.log('Analytics response:', response);
+        
+        // If 'all' period fails or returns empty data, try other periods
+        if (period === 'all' && response && response.success && 
+            (!response.data.chartData || response.data.chartData.length === 0)) {
+          console.log('No data for "all" period, trying "year"...');
+          response = await dashboardService.getAnalytics(userId, 'year');
+          
+          if (!response.data.chartData || response.data.chartData.length === 0) {
+            console.log('No data for "year" period, trying "month"...');
+            response = await dashboardService.getAnalytics(userId, 'month');
+          }
+        }
+        
+        if (response && response.success) {
           setAnalytics(response.data);
           setError(null);
+          console.log('Analytics data set:', response.data);
         } else {
-          setError('Failed to load analytics data');
+          console.error('Analytics failed:', response);
+          setError(response?.message || 'Failed to load analytics data');
         }
       } catch (err) {
         console.error('Analytics data error:', err);
-        setError('Error loading analytics data. Please try again.');
+        if (err.response?.status === 404) {
+          setError('User not found. Please make sure you are logged in properly.');
+        } else if (err.response?.status === 401) {
+          setError('Authentication required. Please log in again.');
+        } else {
+          setError('Error loading analytics data. Please try again.');
+        }
       } finally {
         setLoading(false);
       }
@@ -50,11 +81,11 @@ const AnalyticsTab = ({ userId }) => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analytics</h2>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Analytics</h2>
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading analytics...</span>
+          <span className="ml-3 text-gray-600">Loading analytics...</span>
         </div>
       </div>
     );
@@ -62,20 +93,65 @@ const AnalyticsTab = ({ userId }) => {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analytics</h2>
-        <div className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded relative" role="alert">
-          <span className="block sm:inline">{error}</span>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Analytics</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center mb-3">
+            <FaInfoCircle className="text-red-500 mr-2" />
+            <h3 className="text-red-800 font-medium">Unable to Load Analytics</h3>
+          </div>
+          <p className="text-red-700 mb-4">{error}</p>
+          <div className="space-y-2 text-sm text-red-600">
+            <p><strong>Possible solutions:</strong></p>
+            <ul className="list-disc list-inside space-y-1 ml-4">
+              <li>Make sure you are logged in properly</li>
+              <li>Try refreshing the page</li>
+              <li>Check your internet connection</li>
+              <li>Take some typing tests to generate data</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+          >
+            Retry Loading
+          </button>
         </div>
       </div>
     );
   }
 
-  if (!analytics) {
+  if (!analytics || !analytics.chartData || analytics.chartData.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analytics</h2>
-        <p className="text-gray-500 dark:text-gray-400 text-center py-8">No analytics data available yet.</p>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Analytics</h2>
+        <div className="text-center py-12">
+          <FaChartLine className="mx-auto text-6xl text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Data Available</h3>
+          <p className="text-gray-500 mb-4">
+            {period === 'all' 
+              ? "Complete some typing tests to see your performance analytics and progress over time."
+              : `No data found for the selected time period (${period}). Try selecting "All Time" to see all your test data.`
+            }
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-700">
+            <p><strong>To see analytics:</strong></p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Take some typing tests from the home page</li>
+              <li>Complete at least 3-5 tests for meaningful data</li>
+              <li>Try different time periods (All Time, Week, Month, Year)</li>
+              <li>Data will appear here within the selected time period</li>
+            </ul>
+          </div>
+          {period !== 'all' && (
+            <button
+              onClick={() => setPeriod('all')}
+              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
+            >
+              View All Time Data
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -88,18 +164,29 @@ const AnalyticsTab = ({ userId }) => {
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Performance Analytics</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Performance Analytics</h2>
           
           <div className="mt-3 md:mt-0 inline-flex rounded-md shadow-sm">
             <button
               type="button"
+              onClick={() => setPeriod('all')}
+              className={`relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 text-sm font-medium ${
+                period === 'all'
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              All Time
+            </button>
+            <button
+              type="button"
               onClick={() => setPeriod('week')}
-              className={`relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
                 period === 'week'
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
               Week
@@ -107,10 +194,10 @@ const AnalyticsTab = ({ userId }) => {
             <button
               type="button"
               onClick={() => setPeriod('month')}
-              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
                 period === 'month'
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
               Month
@@ -118,10 +205,10 @@ const AnalyticsTab = ({ userId }) => {
             <button
               type="button"
               onClick={() => setPeriod('year')}
-              className={`relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+              className={`relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 text-sm font-medium ${
                 period === 'year'
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
               Year
@@ -135,7 +222,7 @@ const AnalyticsTab = ({ userId }) => {
             className={`px-3 py-1 rounded-md text-sm ${
               activeChart === 'wpm' 
                 ? 'bg-indigo-600 text-white' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                : 'bg-gray-100 text-gray-700'
             }`}
           >
             WPM
@@ -145,7 +232,7 @@ const AnalyticsTab = ({ userId }) => {
             className={`px-3 py-1 rounded-md text-sm ${
               activeChart === 'accuracy' 
                 ? 'bg-green-600 text-white' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                : 'bg-gray-100 text-gray-700'
             }`}
           >
             Accuracy
@@ -155,7 +242,7 @@ const AnalyticsTab = ({ userId }) => {
             className={`px-3 py-1 rounded-md text-sm ${
               activeChart === 'tests' 
                 ? 'bg-amber-600 text-white' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                : 'bg-gray-100 text-gray-700'
             }`}
           >
             Tests Completed
@@ -165,14 +252,14 @@ const AnalyticsTab = ({ userId }) => {
             className={`px-3 py-1 rounded-md text-sm ${
               activeChart === 'combined' 
                 ? 'bg-purple-600 text-white' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                : 'bg-gray-100 text-gray-700'
             }`}
           >
             Combined
           </button>
         </div>
         
-        <div className="h-80 bg-white dark:bg-gray-800 rounded-lg">
+        <div className="h-80 bg-white rounded-lg">
           {formattedChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               {activeChart === 'wpm' && (
@@ -384,7 +471,7 @@ const AnalyticsTab = ({ userId }) => {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <FaInfoCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-2 text-sm text-gray-500">
                   No data available for this period. Complete some typing tests to see your progress.
                 </p>
               </div>
@@ -392,7 +479,7 @@ const AnalyticsTab = ({ userId }) => {
           )}
         </div>
         
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+        <div className="mt-2 text-xs text-gray-500 text-center">
           {activeChart === 'wpm' 
             ? 'Chart shows your typing speed (WPM) over time' 
             : activeChart === 'accuracy' 
@@ -403,30 +490,30 @@ const AnalyticsTab = ({ userId }) => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="bg-indigo-50 dark:bg-indigo-900/50 p-4 rounded-lg">
+          <div className="bg-indigo-50 p-4 rounded-lg">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900 mr-4">
-                <FaKeyboard className="text-indigo-600 dark:text-indigo-400" />
+              <div className="p-3 rounded-full bg-indigo-100 mr-4">
+                <FaKeyboard className="text-indigo-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg WPM</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{periodStats.avgWpm}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-gray-600">Avg WPM</p>
+                <p className="text-xl font-bold text-gray-900">{periodStats.avgWpm}</p>
+                <p className="text-xs text-gray-500">
                   {improvement.startsWith('-') ? 'Decreased by' : 'Improved by'} {improvement.replace('-', '')}
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-lg">
+          <div className="bg-green-50 p-4 rounded-lg">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 mr-4">
-                <FaChartLine className="text-green-600 dark:text-green-400" />
+              <div className="p-3 rounded-full bg-green-100 mr-4">
+                <FaChartLine className="text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Accuracy</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{periodStats.avgAccuracy}%</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-gray-600">Avg Accuracy</p>
+                <p className="text-xl font-bold text-gray-900">{periodStats.avgAccuracy}%</p>
+                <p className="text-xs text-gray-500">
                   From {totalTests} tests
                 </p>
               </div>
@@ -437,43 +524,43 @@ const AnalyticsTab = ({ userId }) => {
         </div>
         
         {formattedChartData.length > 0 && (
-          <div className="mt-6 bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg">
+          <div className="mt-6 bg-amber-50 p-4 rounded-lg">
             <div className="flex items-center mb-2">
-              <FaListAlt className="h-5 w-5 text-amber-600 dark:text-amber-400 mr-2" />
-              <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300">Tests Frequency</h3>
+              <FaListAlt className="h-5 w-5 text-amber-600 mr-2" />
+              <h3 className="text-sm font-medium text-amber-800">Tests Frequency</h3>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               
               
-              <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Most Active Day</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <div className="bg-white p-3 rounded-md shadow-sm">
+                <p className="text-sm font-medium text-gray-500">Most Active Day</p>
+                <p className="text-xl font-bold text-gray-900">
                   {formattedChartData.reduce((prev, current) => (prev.tests > current.tests) ? prev : current).date}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500">
                   {formattedChartData.reduce((prev, current) => (prev.tests > current.tests) ? prev : current).tests} tests
                 </p>
               </div>
               
-              <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Consistency</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <div className="bg-white p-3 rounded-md shadow-sm">
+                <p className="text-sm font-medium text-gray-500">Consistency</p>
+                <p className="text-xl font-bold text-gray-900">
                   {Math.round((formattedChartData.filter(d => d.tests > 0).length / formattedChartData.length) * 100)}%
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">of days with tests</p>
+                <p className="text-xs text-gray-500">of days with tests</p>
               </div>
             </div>
           </div>
         )}
         
         {formattedChartData.length > 0 && (
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center">
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-800 flex items-center">
               <FaInfoCircle className="mr-2" /> 
               Performance Insight
             </h3>
-            <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+            <p className="mt-1 text-sm text-blue-700">
               {improvement.startsWith('-') 
                 ? `Your typing speed has decreased by ${improvement.replace('-', '')} compared to the previous ${period}. Consider practicing more regularly to improve.` 
                 : `Great progress! Your typing speed has improved by ${improvement} over the ${period}. Keep up the good work!`}
@@ -482,39 +569,39 @@ const AnalyticsTab = ({ userId }) => {
         )}
       </div>
       
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Trends</h3>
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
         
         {chartData && chartData.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">WPM</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accuracy</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tests</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WPM</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tests</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {chartData.slice(0, 10).map((day) => (
-                  <tr key={day.date} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{day.date}</td>
+                  <tr key={day.date} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{day.date}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">{day.wpm}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 dark:text-indigo-400">{day.accuracy}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{day.tests}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600">{day.accuracy}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{day.tests}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No trend data available for this period.</p>
+          <p className="text-gray-500 text-center py-4">No trend data available for this period.</p>
         )}
         
         {chartData && chartData.length > 10 && (
           <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500">
               Showing 10 of {chartData.length} data points
             </p>
           </div>

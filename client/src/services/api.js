@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = 'https://typomaster-1cvz.onrender.com/api';
+// const API_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -99,13 +100,11 @@ export const dashboardService = {
       const lastFetch = localStorage.getItem('lastAchievementFetch');
       
       if (lastFetch && new Date(lastFetch) < today) {
-        console.log('Day changed since last achievement fetch, forcing refresh');
         forceRefresh = true;
       }
       
       localStorage.setItem('lastAchievementFetch', now.toISOString());
       
-      console.log('Fetching achievements for user:', uid, forceRefresh ? '(force refresh)' : '');
       const response = await api.get(`/achievements?uid=${uid}${forceRefresh ? '&refresh=true' : ''}`);
       return response.data;
     } catch (error) {
@@ -114,20 +113,8 @@ export const dashboardService = {
     }
   },
   
-  debugAchievements: async (uid) => {
-    try {
-      console.log('Fetching debug data for user:', uid);
-      const response = await api.get(`/achievements/debug/${uid}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching debug data:', error);
-      throw error;
-    }
-  },
-
   resetDailyChallenge: async (uid) => {
     try {
-      console.log('Resetting daily challenge for user:', uid);
       const response = await api.post(`/achievements/reset-daily?uid=${uid}`);
       return response.data;
     } catch (error) {

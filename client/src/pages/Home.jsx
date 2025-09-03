@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { FaKeyboard, FaTrophy, FaChartLine, FaArrowRight } from 'react-icons/fa';
-import { AppContext } from '../App';
+import { useAppContext } from '../App';
 import LoginModal from '../components/LoginModal';
 
 const Home = () => {
-  const { user, logout } = useContext(AppContext) || {};
+  const { user } = useAppContext();
 
   const [typedText, setTypedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -45,6 +45,7 @@ const Home = () => {
     if (!isTyping) {
       setIsTyping(true);
       setTypedText('');
+      setCurrentIndex(0);
       setStartTime(Date.now());
     }
     
@@ -54,21 +55,25 @@ const Home = () => {
       if (e.key === 'Backspace') {
         setTypedText(prev => prev.slice(0, -1));
       } else {
-        setTypedText(prev => prev + e.key);
+        const newTypedText = typedText + e.key;
+        setTypedText(newTypedText);
         
+        // Calculate accuracy first
+        let correctChars = 0;
+        for (let i = 0; i < newTypedText.length; i++) {
+          if (i < demoText.length && newTypedText[i] === demoText[i]) {
+            correctChars++;
+          }
+        }
+        const accuracy = newTypedText.length > 0 
+          ? Math.round((correctChars / newTypedText.length) * 100) 
+          : 100;
+        
+        // Calculate WPM using the corrected text length
         const elapsedMinutes = (Date.now() - startTime) / 60000;
         if (elapsedMinutes > 0) {
-          const wpm = Math.round(typedText.length / 5 / elapsedMinutes);
-          
-          let correctChars = 0;
-          for (let i = 0; i < typedText.length; i++) {
-            if (i < demoText.length && typedText[i] === demoText[i]) {
-              correctChars++;
-            }
-          }
-          const accuracy = Math.round((correctChars / typedText.length) * 100) || 100;
-          
-          setStats({ wpm, accuracy });
+          const wpm = Math.round((correctChars / 5) / elapsedMinutes);
+          setStats({ wpm: Math.max(0, wpm), accuracy });
         }
       }
     }
@@ -86,10 +91,10 @@ const Home = () => {
       description: "Monitor your progress over time with detailed statistics and personalized insights."
     },
     {
-  icon: <FaChartLine className="h-12 w-12 text-indigo-500" />,
-  title: "Personalized Analytics",
-  description: "Visualize your growth with interactive charts that identify patterns in your typing, highlighting strengths and areas for improvement."
-}
+      icon: <FaTrophy className="h-12 w-12 text-indigo-500" />,
+      title: "Achievement System",
+      description: "Unlock achievements and compete on the leaderboard to stay motivated and track your growth."
+    }
   ];
 
   const testimonials = [
@@ -114,6 +119,9 @@ const Home = () => {
     if (!user) {
       e.preventDefault();
       setShowLoginModal(true);
+    } else {
+      // User is authenticated, navigate to test
+      navigate('/test');
     }
   };
   
@@ -123,17 +131,17 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50">
       <Nav />
       
       <section className="pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pb-24">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
               Become a
-              <span className="block text-indigo-600 dark:text-indigo-400">Typing Master</span>
+              <span className="block text-indigo-600">Typing Master</span>
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+            <p className="mt-6 text-lg leading-8 text-gray-600">
               Improve your typing speed and accuracy with our interactive typing tests.
               Track your progress and compete with typists around the world.
             </p>
@@ -148,7 +156,7 @@ const Home = () => {
               {!user && (
                 <Link
                   to="/login"
-                  className="rounded-md bg-white px-5 py-3 text-md font-semibold text-indigo-600 shadow-sm ring-1 ring-inset ring-indigo-600 hover:ring-indigo-700 hover:bg-gray-50 dark:bg-transparent dark:text-indigo-400 dark:hover:bg-gray-800 transition-colors"
+                  className="rounded-md bg-white px-5 py-3 text-md font-semibold text-indigo-600 shadow-sm ring-1 ring-inset ring-indigo-600 hover:ring-indigo-700 hover:bg-gray-50 transition-colors"
                 >
                   Login to Track Progress
                 </Link>
@@ -157,14 +165,14 @@ const Home = () => {
           </div>
           
           <div className="mt-12 sm:mt-16">
-            <div className="relative mx-auto max-w-3xl bg-white dark:bg-gray-800 shadow-xl rounded-lg overflow-hidden">
-              <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center">
+            <div className="relative mx-auto max-w-3xl bg-white shadow-xl rounded-lg overflow-hidden">
+              <div className="bg-gray-100 px-4 py-2 flex items-center">
                 <div className="flex space-x-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
-                <div className="mx-auto text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="mx-auto text-xs font-medium text-gray-500">
                   TypoMaster Demo - Click to try
                 </div>
               </div>
@@ -183,11 +191,11 @@ const Home = () => {
               >
                 {isTyping && (
                   <div className="flex justify-between mb-4 text-sm">
-                    <div className="bg-indigo-100 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
-                      <span className="font-bold text-indigo-700 dark:text-indigo-300">WPM: {stats.wpm}</span>
+                    <div className="bg-indigo-100 px-3 py-1 rounded-full">
+                      <span className="font-bold text-indigo-700">WPM: {stats.wpm}</span>
                     </div>
-                    <div className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
-                      <span className="font-bold text-green-700 dark:text-green-300">Accuracy: {stats.accuracy}%</span>
+                    <div className="bg-green-100 px-3 py-1 rounded-full">
+                      <span className="font-bold text-green-700">Accuracy: {stats.accuracy}%</span>
                     </div>
                   </div>
                 )}
@@ -207,10 +215,10 @@ const Home = () => {
                           <span 
                             key={index}
                             className={`
-                              ${status === 'correct' ? 'text-green-600 dark:text-green-400' : ''}
-                              ${status === 'incorrect' ? 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30' : ''}
-                              ${status === 'current' ? 'border-b-2 border-indigo-600 dark:border-indigo-400 animate-pulse' : ''}
-                              ${!status ? 'text-gray-500 dark:text-gray-400' : ''}
+                              ${status === 'correct' ? 'text-green-600' : ''}
+                              ${status === 'incorrect' ? 'text-red-600 bg-red-100' : ''}
+                              ${status === 'current' ? 'border-b-2 border-indigo-600 animate-pulse' : ''}
+                              ${!status ? 'text-gray-500' : ''}
                             `}
                           >
                             {char}
@@ -219,14 +227,14 @@ const Home = () => {
                       })}
                     </div>
                   ) : (
-                    <div className="text-gray-800 dark:text-gray-200">
+                    <div className="text-gray-800">
                       {typedText}
-                      <span className="animate-pulse border-r-2 border-indigo-600 dark:border-indigo-400 ml-0.5">&nbsp;</span>
+                      <span className="animate-pulse border-r-2 border-indigo-600 ml-0.5">&nbsp;</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-4 text-center text-sm text-gray-500">
                   {isTyping ? 'Type the text above' : 'Click to start typing or watch the demo'}
                 </div>
               </div>
@@ -235,25 +243,25 @@ const Home = () => {
         </div>
       </section>
       
-      <section className="py-12 bg-white dark:bg-gray-800">
+      <section className="py-12 bg-white">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-base font-semibold leading-7 text-indigo-600 dark:text-indigo-400">FEATURES</h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+            <h2 className="text-base font-semibold leading-7 text-indigo-600">FEATURES</h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
               Everything you need to improve your typing
             </p>
           </div>
           
           <div className="mt-16 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, index) => (
-              <div key={index} className="relative p-8 bg-gray-50 dark:bg-gray-900 rounded-2xl">
-                <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-6">
+              <div key={index} className="relative p-8 bg-gray-50 rounded-2xl">
+                <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-indigo-100 text-indigo-600 mb-6">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold leading-7 text-gray-900 dark:text-white">
+                <h3 className="text-xl font-semibold leading-7 text-gray-900">
                   {feature.title}
                 </h3>
-                <p className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-300">
+                <p className="mt-2 text-base leading-7 text-gray-600">
                   {feature.description}
                 </p>
               </div>
@@ -265,23 +273,23 @@ const Home = () => {
       <section className="py-12 sm:py-16 lg:py-20">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex flex-col items-center">
-            <h2 className="text-3xl font-bold tracking-tight text-center text-gray-900 dark:text-white sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-center text-gray-900 sm:text-4xl">
               What our users say
             </h2>
-            <p className="mt-4 max-w-2xl text-xl text-center text-gray-600 dark:text-gray-300">
+            <p className="mt-4 max-w-2xl text-xl text-center text-gray-600">
               Join thousands of typists who have improved their skills with TypoMaster
             </p>
           </div>
           
           <div className="grid grid-cols-1 gap-6 mt-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="flex flex-col h-full p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div key={index} className="flex flex-col h-full p-6 bg-white rounded-2xl shadow-sm border border-gray-200">
                 <div className="flex-1">
-                  <p className="text-lg font-medium text-gray-900 dark:text-white">"{testimonial.content}"</p>
+                  <p className="text-lg font-medium text-gray-900">"{testimonial.content}"</p>
                 </div>
-                <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <p className="font-medium text-gray-900 dark:text-white">{testimonial.author}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{testimonial.role}</p>
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                  <p className="font-medium text-gray-900">{testimonial.author}</p>
+                  <p className="text-sm text-gray-500">{testimonial.role}</p>
                 </div>
               </div>
             ))}
@@ -289,7 +297,7 @@ const Home = () => {
         </div>
       </section>
       
-      <section className="py-12 bg-indigo-600 dark:bg-indigo-900">
+      <section className="py-12 bg-indigo-600">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
             <div>
@@ -311,27 +319,24 @@ const Home = () => {
         </div>
       </section>
       
-      <footer className="bg-white dark:bg-gray-800">
+      <footer className="bg-white">
         <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
           <div className="flex justify-center space-x-6 md:order-2">
-            <Link to="/test" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+            <Link to="/test" className="text-gray-400 hover:text-gray-500">
               Practice
             </Link>
-            {/* <Link to="/leaderboard" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-              Leaderboard
-            </Link> */}
             {user ? (
-              <Link to="/dashboard" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+              <Link to="/dashboard" className="text-gray-400 hover:text-gray-500">
                 Dashboard
               </Link>
             ) : (
-              <Link to="/login" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+              <Link to="/login" className="text-gray-400 hover:text-gray-500">
                 Login
               </Link>
             )}
           </div>
           <div className="mt-8 md:order-1 md:mt-0">
-            <p className="text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
+            <p className="text-center text-xs leading-5 text-gray-500">
               &copy; {new Date().getFullYear()} TypoMaster. All rights reserved.
             </p>
           </div>

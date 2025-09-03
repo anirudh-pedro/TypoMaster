@@ -4,6 +4,43 @@ const TestResult = require('../models/TestResult');
 const User = require('../models/User');
 const { checkAchievements } = require('../controllers/achievementController');
 
+// Helper function to update user statistics
+async function updateUserStats(user, wpm, accuracy, duration, characters) {
+  try {
+    const newTestsCompleted = user.stats.testsCompleted + 1;
+    const newTotalTime = user.stats.totalTime + duration;
+    const newTotalCharacters = user.stats.totalCharacters + characters;
+    
+    // Calculate new averages
+    const currentAvgWpmTotal = user.stats.avgWpm * user.stats.testsCompleted;
+    const newAvgWpm = (currentAvgWpmTotal + wpm) / newTestsCompleted;
+    
+    const currentAvgAccuracyTotal = user.stats.avgAccuracy * user.stats.testsCompleted;
+    const newAvgAccuracy = (currentAvgAccuracyTotal + accuracy) / newTestsCompleted;
+    
+    // Update user stats
+    user.stats.testsCompleted = newTestsCompleted;
+    user.stats.totalTime = newTotalTime;
+    user.stats.totalCharacters = newTotalCharacters;
+    user.stats.avgWpm = newAvgWpm;
+    user.stats.avgAccuracy = newAvgAccuracy;
+    
+    // Update best scores if applicable
+    if (wpm > user.stats.bestWpm) {
+      user.stats.bestWpm = wpm;
+    }
+    
+    if (accuracy > user.stats.bestAccuracy) {
+      user.stats.bestAccuracy = accuracy;
+    }
+    
+    await user.save();
+  } catch (error) {
+    console.error('Error updating user stats:', error);
+    throw error;
+  }
+}
+
 // Middleware to verify user is authenticated
 const verifyUser = async (req, res, next) => {
   try {
@@ -41,43 +78,66 @@ const verifyUser = async (req, res, next) => {
 // GET /api/dashboard/stats - Get user dashboard stats
 router.get('/stats', verifyUser, async (req, res) => {
   try {
-    // User is already attached from middleware
     const user = req.user;
     
-    // Get recent test results
-    const recentTests = await TestResult.find({ user: user._id })
-      .sort({ date: -1 })
-      .limit(10);
-    
-    // Calculate recent progress (last 6 results)
-    const progressData = await TestResult.find({ user: user._id })
-      .sort({ date: -1 })
-      .limit(30);
-    
-    // Calculate WPM change (from 30 days ago)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const oldTests = await TestResult.find({ 
-      user: user._id, 
-      date: { $lt: thirtyDaysAgo } 
-    }).sort({ date: -1 }).limit(5);
-    
-    const newTests = await TestResult.find({ 
-      user: user._id,
-      date: { $gt: thirtyDaysAgo } 
-    }).sort({ date: -1 }).limit(5);
-    
+    // Use aggregation pipeline for efficient data retrieval
+    const statsAggregation = await TestResult.aggregate([
+      { $match: { user: user._id } },
+      {
+        $facet: {
+          // Recent tests
+          recentTests: [
+            { $sort: { date: -1 } },
+            { $limit: 10 }
+          ],
+          // Progress data for charts
+          progressData: [
+            { $sort: { date: -1 } },
+            { $limit: 30 }
+          ],
+          // Tests from 30 days ago for comparison
+          oldTests: [
+            {
+              $match: {
+                date: { $lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+              }
+            },
+            { $sort: { date: -1 } },
+            { $limit: 10 }
+          ],
+          // Overall statistics
+          overallStats: [
+            {
+              $group: {
+                _id: null,
+                totalTests: { $sum: 1 },
+                avgWpm: { $avg: "$wpm" },
+                avgAccuracy: { $avg: "$accuracy" },
+                maxWpm: { $max: "$wpm" },
+                maxAccuracy: { $max: "$accuracy" }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    const {
+      recentTests,
+      progressData,
+      oldTests,
+      overallStats
+    } = statsAggregation[0];
+
     // Calculate WPM change
     const oldAvgWpm = oldTests.length > 0 
       ? oldTests.reduce((sum, test) => sum + test.wpm, 0) / oldTests.length 
       : user.stats.avgWpm;
     
-    const newAvgWpm = newTests.length > 0 
-      ? newTests.reduce((sum, test) => sum + test.wpm, 0) / newTests.length 
+    const recentAvgWpm = recentTests.length > 0 
+      ? recentTests.reduce((sum, test) => sum + test.wpm, 0) / recentTests.length 
       : user.stats.avgWpm;
-    
-    const wpmChange = newAvgWpm - oldAvgWpm;
+    const wpmChange = recentAvgWpm - oldAvgWpm;
     const wpmChangeFormatted = wpmChange >= 0 ? `+${wpmChange.toFixed(1)}` : wpmChange.toFixed(1);
     
     // Get user's global rank
@@ -129,9 +189,6 @@ router.post('/test-result', async (req, res) => {
   try {
     const { uid } = req.query; 
     
-    console.log('Saving test result for user:', uid);
-    console.log('Test data:', req.body);
-    
     if (!uid) {
       return res.status(400).json({
         success: false,
@@ -140,7 +197,6 @@ router.post('/test-result', async (req, res) => {
     }
     
     const user = await User.findOne({ firebaseUid: uid });
-    console.log('Found user:', user ? 'Yes' : 'No');
     
     if (!user) {
       return res.status(404).json({
@@ -158,25 +214,39 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    if (accuracy < 15 && wpm > 60) {
+    // Consistent validation logic
+    if (accuracy < 10) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid result: high speed with extremely low accuracy'
+        message: 'Invalid result: accuracy too low (minimum 10%)'
       });
     }
     
-    if (errorCount >= characters * 0.9) {
+    if (errorCount > characters * 0.8) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid result: error count too high'
+        message: 'Invalid result: too many errors relative to characters typed'
       });
     }
     
-    let maxWpm = 220;
+    // WPM validation based on accuracy
+    let maxAllowedWPM = 220;
     if (accuracy < 50) {
-      maxWpm = 120; 
+      maxAllowedWPM = 100;
+    } else if (accuracy < 70) {
+      maxAllowedWPM = 150;
+    } else if (accuracy < 90) {
+      maxAllowedWPM = 200;
     }
-    const validatedWpm = Math.min(wpm, maxWpm);
+    
+    if (wpm > maxAllowedWPM) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid result: WPM too high for accuracy level (max ${maxAllowedWPM} for ${accuracy.toFixed(1)}% accuracy)`
+      });
+    }
+    
+    const validatedWpm = Math.min(wpm, maxAllowedWPM);
     
     const testResult = new TestResult({
       wpm: validatedWpm,
@@ -189,25 +259,15 @@ router.post('/test-result', async (req, res) => {
       date: new Date()
     });
     
-    console.log('Saving test result with data:', {
-      wpm,
-      accuracy,
-      text: text.substring(0, 20) + '...',
-      duration,
-      errorCount,
-      characters,
-      userId: user._id
-    });
-    
     await testResult.save();
-    console.log('Test result saved successfully');
+    
+    // Update user statistics
+    await updateUserStats(user, validatedWpm, accuracy, duration, characters);
     
     let unlockedAchievements = [];
     try {
       if (typeof checkAchievements === 'function') {
-        console.log('Checking achievements for user');
         unlockedAchievements = await checkAchievements(uid);
-        console.log('Unlocked achievements:', unlockedAchievements);
       }
     } catch (achievementError) {
       console.error('Error checking achievements, but continuing:', achievementError);
@@ -293,6 +353,8 @@ router.get('/analytics', verifyUser, async (req, res) => {
     const user = req.user;
     const { period = 'month' } = req.query;
     
+    console.log('Analytics request - User:', user.firebaseUid, 'Period:', period);
+    
     const startDate = new Date();
     if (period === 'week') {
       startDate.setDate(startDate.getDate() - 7);
@@ -300,12 +362,40 @@ router.get('/analytics', verifyUser, async (req, res) => {
       startDate.setMonth(startDate.getMonth() - 1);
     } else if (period === 'year') {
       startDate.setFullYear(startDate.getFullYear() - 1);
+    } else if (period === 'all') {
+      // For 'all' period, don't filter by date
+      startDate.setFullYear(2020); // Set to a very old date
     }
+    
+    console.log('Analytics - Start date filter:', startDate);
+    
+    // First, check total tests for this user (for debugging)
+    const totalUserTests = await TestResult.countDocuments({ user: user._id });
+    console.log('Analytics - Total tests for user:', totalUserTests);
     
     const tests = await TestResult.find({
       user: user._id,
       date: { $gte: startDate }
     }).sort({ date: 1 });
+    
+    console.log('Analytics - Tests found in period:', tests.length);
+    
+    // If no tests found in the period but user has tests, try the last 3 months
+    if (tests.length === 0 && totalUserTests > 0) {
+      console.log('Analytics - No tests in period, expanding to 3 months');
+      const extendedStartDate = new Date();
+      extendedStartDate.setMonth(extendedStartDate.getMonth() - 3);
+      
+      const extendedTests = await TestResult.find({
+        user: user._id,
+        date: { $gte: extendedStartDate }
+      }).sort({ date: 1 });
+      
+      if (extendedTests.length > 0) {
+        tests.push(...extendedTests);
+        console.log('Analytics - Found tests in extended period:', extendedTests.length);
+      }
+    }
     
     const dailyData = {};
     tests.forEach(test => {
