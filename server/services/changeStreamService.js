@@ -1,6 +1,5 @@
 const TestResult = require('../models/TestResult');
 const User = require('../models/User');
-const Achievement = require('../models/Achievement');
 
 const clients = [];
 
@@ -62,41 +61,8 @@ async function initChangeStreams() {
       }
     });
     
-    const achievementChangeStream = Achievement.watch();
-    
-    achievementChangeStream.on('change', async (change) => {
-      if (change.operationType === 'update' && 
-          change.updateDescription.updatedFields && 
-          Object.keys(change.updateDescription.updatedFields).some(field => field.includes('achievements.$.unlocked'))) {
-        try {
-          const achievement = await Achievement.findById(change.documentKey._id);
-          const dailyChallenge = achievement?.achievements?.find(a => a.id === 'daily_test');
-          
-          if (dailyChallenge && dailyChallenge.unlocked) {
-            const user = await User.findOne({ firebaseUid: achievement.userId });
-            
-            if (user) {
-              clients.forEach(client => {
-                client.res.write(`data: ${JSON.stringify({
-                  type: 'daily-challenge-complete',
-                  data: {
-                    userId: achievement.userId,
-                    username: user.name,
-                    streak: achievement.stats.currentStreak,
-                    date: dailyChallenge.date
-                  }
-                })}\n\n`);
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error processing achievement change:', error);
-        }
-      }
-    });
-    
     console.log('MongoDB change streams initialized successfully');
-    return { testResultChangeStream, achievementChangeStream };
+    return { testResultChangeStream };
   } catch (error) {
     console.error('Failed to set up change streams:', error);
     console.log('Falling back to polling mode for updates');

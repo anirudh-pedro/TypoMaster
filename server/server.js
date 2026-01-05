@@ -1,8 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
-const cron = require('node-cron');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
@@ -62,9 +60,6 @@ try {
   console.error('Error loading leaderboard routes:', error.message);
 }
 
-const achievementRoutes = require('./routes/achievement');
-app.use('/api/achievements', achievementRoutes);
-
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -92,10 +87,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: [
       '/api/auth',
-      '/api/user',
-      '/api/tests',
       '/api/dashboard',
-      '/api/achievements'
+      '/api/leaderboard'
     ]
   });
 });
@@ -126,62 +119,9 @@ const startServer = async () => {
   }
 };
 
-cron.schedule('1 0 * * *', async () => {
-  try {
-    console.log('Running daily achievement reset job...');
-    
-    const Achievement = require('./models/Achievement');
-    
-    const result = await Achievement.updateMany(
-      { 'achievements.id': 'daily_test' },
-      { 
-        $set: { 
-          'achievements.$.unlocked': false,
-          'achievements.$.progress': 0,
-          'achievements.$.date': null
-        }
-      }
-    );
-    
-    console.log(`Reset ${result.modifiedCount} daily challenges`);
-  } catch (error) {
-    console.error('Error in daily achievement reset job:', error);
-  }
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
-
 mongoose.connection.once('open', async () => {
   console.log('MongoDB connected');
   await initChangeStreams();
-  
-  try {
-    const Achievement = require('./models/Achievement');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const result = await Achievement.updateMany(
-      { 
-        'achievements.id': 'daily_test',
-        'achievements.unlocked': true,
-        'achievements.date': { $lt: today }
-      },
-      { 
-        $set: { 
-          'achievements.$.unlocked': false,
-          'achievements.$.progress': 0,
-          'achievements.$.date': null
-        }
-      }
-    );
-    
-    if (result.modifiedCount > 0) {
-      console.log(`Reset ${result.modifiedCount} stale daily challenges on startup`);
-    }
-  } catch (error) {
-    console.error('Error checking stale challenges on startup:', error);
-  }
 });
 
 startServer();

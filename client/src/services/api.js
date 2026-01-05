@@ -69,28 +69,6 @@ export const dashboardService = {
       console.error('Error fetching analytics:', error);
       throw error;
     }
-  },
-
-  getAchievements: async (uid, forceRefresh = false) => {
-    try {
-      const now = new Date();
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-      
-      const lastFetch = localStorage.getItem('lastAchievementFetch');
-      
-      if (lastFetch && new Date(lastFetch) < today) {
-        forceRefresh = true;
-      }
-      
-      localStorage.setItem('lastAchievementFetch', now.toISOString());
-      
-      const response = await api.get(`/achievements?uid=${uid}${forceRefresh ? '&refresh=true' : ''}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching achievements:', error);
-      throw error;
-    }
   }
 };
 

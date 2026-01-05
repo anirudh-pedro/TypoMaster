@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const TestResult = require('../models/TestResult');
 const User = require('../models/User');
-const { checkAchievements } = require('../controllers/achievementController');
 
 // Helper function to update user statistics
 async function updateUserStats(user, wpm, accuracy, duration, characters) {
@@ -293,15 +292,6 @@ router.post('/test-result', async (req, res) => {
     // Update user statistics
     await updateUserStats(user, validatedWpm, accuracy, duration, characters);
     
-    let unlockedAchievements = [];
-    try {
-      if (typeof checkAchievements === 'function') {
-        unlockedAchievements = await checkAchievements(uid);
-      }
-    } catch (achievementError) {
-      console.error('Error checking achievements, but continuing:', achievementError);
-    }
-    
     res.json({
       success: true,
       result: {
@@ -312,8 +302,7 @@ router.post('/test-result', async (req, res) => {
         duration,
         date: testResult.date.toISOString()
       },
-      message: 'Test result saved successfully',
-      unlockedAchievements
+      message: 'Test result saved successfully'
     });
   } catch (error) {
     console.error('Detailed error saving test result:', error);
