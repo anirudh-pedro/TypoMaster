@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { FaChartLine, FaHistory, FaTrophy, FaChartBar } from 'react-icons/fa';
+import { FaHistory, FaChartBar } from 'react-icons/fa';
 
 const TabNavigation = ({ activeTab, setActiveTab }) => {
   const scrollContainerRef = useRef(null);
@@ -8,10 +8,8 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
   const [canScrollRight, setCanScrollRight] = useState(false);
   
   const tabs = [
-    // { id: 'overview', label: 'Overview', icon: <FaChartLine className="w-4 h-4" /> },
     { id: 'analytics', label: 'Analytics', icon: <FaChartBar className="w-4 h-4" /> },
-    { id: 'history', label: 'Test History', icon: <FaHistory className="w-4 h-4" /> }, 
-    // { id: 'achievements', label: 'Achievements', icon: <FaTrophy className="w-4 h-4" /> }
+    { id: 'history', label: 'Test History', icon: <FaHistory className="w-4 h-4" /> },
   ];
 
   const checkScroll = () => {

@@ -1,11 +1,10 @@
 const admin = require('firebase-admin');
 const User = require('../models/User');
 
-// Middleware to authenticate Firebase ID token
 exports.authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
       return res.status(401).json({ 
@@ -14,7 +13,6 @@ exports.authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Verify Firebase token
     const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
     

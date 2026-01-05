@@ -83,16 +83,13 @@ const Login = () => {
         } catch (serverError) {
           console.log('Server auth failed, using local mode:', serverError);
           updateUser(userObject);
-          // Redirect to home page
           navigate('/');
           return;
         }
       }
       
-      // Fallback to local auth
       console.log('Using local auth fallback');
       updateUser(userObject);
-      // Redirect to home page
       navigate('/');
       
     } catch (error) {

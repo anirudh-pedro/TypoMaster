@@ -29,12 +29,6 @@ export const leaderboardService = {
     }
   },
 
-  /**
-   * @param {Function} onUpdate - Callback for new results
-   * @param {Function} onInitial - Callback for initial data load
-   * @param {Function} onError - Callback for errors
-   * @returns {Function} - Unsubscribe function
-   */
   subscribeToRealTimeUpdates: (onUpdate, onInitial, onError) => {
     const eventSource = new EventSource(`${API_URL}/realtime`);
     

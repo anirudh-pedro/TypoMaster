@@ -9,10 +9,8 @@ import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Create the App Context
 export const AppContext = createContext();
 
-// Custom hook to use the App Context
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
@@ -21,10 +19,8 @@ export const useAppContext = () => {
   return context;
 };
 
-// App Context Provider Component
 const AppProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Try to load user from localStorage on app start
     try {
       const savedUser = localStorage.getItem('typomaster_user');
       return savedUser ? JSON.parse(savedUser) : null;
@@ -37,7 +33,6 @@ const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [achievementNotifications, setAchievementNotifications] = useState([]);
 
-  // Save user to localStorage whenever user state changes
   useEffect(() => {
     try {
       if (user) {
@@ -50,22 +45,18 @@ const AppProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Function to update user
   const updateUser = (userData) => {
     setUser(userData);
   };
 
-  // Function to logout user
   const logout = () => {
     setUser(null);
     localStorage.removeItem('typomaster_user');
   };
 
-  // Add achievements to notification system
   const addAchievementNotifications = (achievements) => {
     setAchievementNotifications(achievements);
     
-    // Show toast notifications for new achievements
     achievements.forEach(achievement => {
       import('react-toastify').then(({ toast }) => {
         toast.success(
@@ -82,13 +73,11 @@ const AppProvider = ({ children }) => {
       });
     });
     
-    // Clear notifications after 10 seconds
     setTimeout(() => {
       setAchievementNotifications([]);
     }, 10000);
   };
 
-  // Context value
   const contextValue = {
     user,
     updateUser,
@@ -106,7 +95,6 @@ const AppProvider = ({ children }) => {
   );
 };
 
-// Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user } = useAppContext();
   
@@ -117,7 +105,6 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// App Content Component
 const AppContent = () => {
   const { user, logout, isLoading } = useAppContext();
 
@@ -144,14 +131,12 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
-        {/* Catch-all route - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
 };
 
-// Main App Component
 const App = () => {
   return (
     <AppProvider>

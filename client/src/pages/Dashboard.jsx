@@ -101,14 +101,10 @@ const Dashboard = () => {
 
   const renderTabContent = () => {
     switch(activeTab) {
-      // case 'overview':
-      //   return <OverviewTab data={dashboardData} />;
       case 'history':
         return <HistoryTab userId={user.uid} />;
       case 'analytics':
         return <AnalyticsTab userId={user.uid} />;
-      // case 'achievements':
-      //   return <AchievementsTab userId={user.uid} refreshTrigger={achievementRefreshTrigger} />;
       default:
         return <AnalyticsTab userId={user.uid} />;
     }

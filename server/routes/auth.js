@@ -3,7 +3,6 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const User = require('../models/User');
 
-// Initialize Firebase Admin SDK
 try {
   const serviceAccount = require('../config/firebase-service-account.json');
   
@@ -16,7 +15,6 @@ try {
   console.error('Firebase Admin initialization error:', error.message);
 }
 
-// Middleware to verify Firebase ID token
 const verifyFirebaseToken = async (req, res, next) => {
   try {
     const { idToken } = req.body;

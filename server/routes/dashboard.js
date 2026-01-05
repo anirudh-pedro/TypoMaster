@@ -3,28 +3,24 @@ const router = express.Router();
 const TestResult = require('../models/TestResult');
 const User = require('../models/User');
 
-// Helper function to update user statistics
 async function updateUserStats(user, wpm, accuracy, duration, characters) {
   try {
     const newTestsCompleted = user.stats.testsCompleted + 1;
     const newTotalTime = user.stats.totalTime + duration;
     const newTotalCharacters = user.stats.totalCharacters + characters;
     
-    // Calculate new averages
     const currentAvgWpmTotal = user.stats.avgWpm * user.stats.testsCompleted;
     const newAvgWpm = (currentAvgWpmTotal + wpm) / newTestsCompleted;
     
     const currentAvgAccuracyTotal = user.stats.avgAccuracy * user.stats.testsCompleted;
     const newAvgAccuracy = (currentAvgAccuracyTotal + accuracy) / newTestsCompleted;
     
-    // Update user stats
     user.stats.testsCompleted = newTestsCompleted;
     user.stats.totalTime = newTotalTime;
     user.stats.totalCharacters = newTotalCharacters;
     user.stats.avgWpm = newAvgWpm;
     user.stats.avgAccuracy = newAvgAccuracy;
     
-    // Update best scores if applicable
     if (wpm > user.stats.bestWpm) {
       user.stats.bestWpm = wpm;
     }
@@ -40,10 +36,8 @@ async function updateUserStats(user, wpm, accuracy, duration, characters) {
   }
 }
 
-// Middleware to verify user is authenticated
 const verifyUser = async (req, res, next) => {
   try {
-    // Get UID from request (sent by frontend)
     const { uid } = req.query;
     
     if (!uid) {
@@ -53,10 +47,8 @@ const verifyUser = async (req, res, next) => {
       });
     }
     
-    // Find the user in the database
     let user = await User.findOne({ firebaseUid: uid });
     
-    // Auto-create user if they don't exist (handles fallback auth scenarios)
     if (!user) {
       console.log(`verifyUser: Creating new user with firebaseUid: ${uid}`);
       user = new User({
@@ -77,7 +69,6 @@ const verifyUser = async (req, res, next) => {
       console.log(`verifyUser: New user created: ${user._id}`);
     }
     
-    // Attach user to request
     req.user = user;
     next();
   } catch (error) {
@@ -89,27 +80,22 @@ const verifyUser = async (req, res, next) => {
   }
 };
 
-// GET /api/dashboard/stats - Get user dashboard stats
 router.get('/stats', verifyUser, async (req, res) => {
   try {
     const user = req.user;
     
-    // Use aggregation pipeline for efficient data retrieval
     const statsAggregation = await TestResult.aggregate([
       { $match: { user: user._id } },
       {
         $facet: {
-          // Recent tests
           recentTests: [
             { $sort: { date: -1 } },
             { $limit: 10 }
           ],
-          // Progress data for charts
           progressData: [
             { $sort: { date: -1 } },
             { $limit: 30 }
           ],
-          // Tests from 30 days ago for comparison
           oldTests: [
             {
               $match: {
@@ -119,7 +105,6 @@ router.get('/stats', verifyUser, async (req, res) => {
             { $sort: { date: -1 } },
             { $limit: 10 }
           ],
-          // Overall statistics
           overallStats: [
             {
               $group: {
@@ -143,7 +128,6 @@ router.get('/stats', verifyUser, async (req, res) => {
       overallStats
     } = statsAggregation[0];
 
-    // Calculate WPM change
     const oldAvgWpm = oldTests.length > 0 
       ? oldTests.reduce((sum, test) => sum + test.wpm, 0) / oldTests.length 
       : user.stats.avgWpm;
@@ -154,7 +138,6 @@ router.get('/stats', verifyUser, async (req, res) => {
     const wpmChange = recentAvgWpm - oldAvgWpm;
     const wpmChangeFormatted = wpmChange >= 0 ? `+${wpmChange.toFixed(1)}` : wpmChange.toFixed(1);
     
-    // Get user's global rank
     const betterUsers = await User.countDocuments({ 'stats.bestWpm': { $gt: user.stats.bestWpm } });
     const totalUsers = await User.countDocuments();
     const globalRank = betterUsers + 1;
@@ -212,7 +195,6 @@ router.post('/test-result', async (req, res) => {
     
     let user = await User.findOne({ firebaseUid: uid });
     
-    // Auto-create user if they don't exist (handles fallback auth scenarios)
     if (!user) {
       console.log(`Creating new user with firebaseUid: ${uid}`);
       user = new User({
@@ -242,7 +224,6 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // Consistent validation logic
     if (accuracy < 10) {
       return res.status(400).json({
         success: false,
@@ -257,7 +238,6 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    // WPM validation based on accuracy
     let maxAllowedWPM = 220;
     if (accuracy < 50) {
       maxAllowedWPM = 100;
@@ -289,7 +269,6 @@ router.post('/test-result', async (req, res) => {
     
     await testResult.save();
     
-    // Update user statistics
     await updateUserStats(user, validatedWpm, accuracy, duration, characters);
     
     res.json({
@@ -381,8 +360,7 @@ router.get('/analytics', verifyUser, async (req, res) => {
     } else if (period === 'year') {
       startDate.setFullYear(startDate.getFullYear() - 1);
     } else if (period === 'all') {
-      // For 'all' period, don't filter by date
-      startDate.setFullYear(2020); // Set to a very old date
+      startDate.setFullYear(2020);
     }
     
     console.log('Analytics - Start date filter:', startDate);
