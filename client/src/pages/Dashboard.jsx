@@ -4,11 +4,8 @@ import { useAppContext } from "../App";
 
 import ProfileSection from '../components/dashboard/ProfileSection';
 import TabNavigation from '../components/dashboard/TabNavigation';
-import OverviewTab from '../components/dashboard/OverviewTab';
 import HistoryTab from '../components/dashboard/HistoryTab';
 import AnalyticsTab from '../components/dashboard/AnalyticsTab';
-import AchievementsTab from '../components/dashboard/AchievementsTab';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 import { dashboardService } from '../services/api';
 
@@ -76,8 +73,9 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-24 max-w-7xl">
-        <LoadingSpinner size="large" text="Loading dashboard..." />
+      <div className="container mx-auto px-4 py-24 max-w-7xl flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <span className="ml-3 text-gray-600">Loading dashboard...</span>
       </div>
     );
   }

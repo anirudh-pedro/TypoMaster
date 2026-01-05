@@ -56,13 +56,6 @@ try {
 }
 
 try {
-  const userRoutes = require('./routes/users');
-  app.use('/api/users', userRoutes);
-} catch (error) {
-  console.error('Error loading user routes:', error.message);
-}
-
-try {
   const leaderboardRoutes = require('./routes/leaderboard');
   app.use('/api/leaderboard', leaderboardRoutes);
 } catch (error) {

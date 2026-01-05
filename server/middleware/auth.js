@@ -57,23 +57,3 @@ exports.authenticateUser = async (req, res, next) => {
     });
   }
 };
-
-
-exports.optionalAuth = async (req, res, next) => {
-  try {
-    const uid = req.params.userId || req.query.uid;
-    
-    if (!uid) {
-      req.user = null;
-      return next();
-    }
-    
-    const user = await User.findOne({ firebaseUid: uid });
-    
-    req.user = user;
-    next();
-  } catch (error) {
-    req.user = null;
-    next();
-  }
-};

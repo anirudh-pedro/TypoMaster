@@ -27,26 +27,6 @@ export const authApi = {
       console.error('Firebase login error:', error);
       throw error;
     }
-  },
-  
-  login: async (credentials) => {
-    try {
-      const response = await api.post('/auth/login', credentials);
-      return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  },
-  
-  register: async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      console.error('Register error:', error);
-      throw error;
-    }
   }
 };
 
@@ -109,16 +89,6 @@ export const dashboardService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching achievements:', error);
-      throw error;
-    }
-  },
-  
-  resetDailyChallenge: async (uid) => {
-    try {
-      const response = await api.post(`/achievements/reset-daily?uid=${uid}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error resetting daily challenge:', error);
       throw error;
     }
   }
