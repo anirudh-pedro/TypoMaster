@@ -125,28 +125,13 @@ const AnalyticsTab = ({ userId }) => {
     return (
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Analytics</h2>
-        <div className="text-center py-12">
-          <FaChartLine className="mx-auto text-6xl text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Data Available</h3>
-          <p className="text-gray-500 mb-4">
-            {period === 'all' 
-              ? "Complete some typing tests to see your performance analytics and progress over time."
-              : `No data found for the selected time period (${period}). Try selecting "All Time" to see all your test data.`
-            }
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-700">
-            <p><strong>To see analytics:</strong></p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Take some typing tests from the home page</li>
-              <li>Complete at least 3-5 tests for meaningful data</li>
-              <li>Try different time periods (All Time, Week, Month, Year)</li>
-              <li>Data will appear here within the selected time period</li>
-            </ul>
-          </div>
+        <div className="text-center py-8">
+          <FaChartLine className="mx-auto text-4xl text-gray-300 mb-3" />
+          <p className="text-gray-500">Take a typing test to see your analytics.</p>
           {period !== 'all' && (
             <button
               onClick={() => setPeriod('all')}
-              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
+              className="mt-3 text-indigo-600 hover:text-indigo-700 text-sm underline"
             >
               View All Time Data
             </button>
