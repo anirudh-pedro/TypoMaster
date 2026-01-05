@@ -7,9 +7,6 @@ import TypingTest from './pages/TypingTest';
 import Dashboard from './pages/Dashboard';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
-import NotFound from './pages/NotFound';
-import ErrorBoundary from './components/ErrorBoundary';
-import './App.css';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Create the App Context
@@ -147,8 +144,8 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
-        {/* Catch-all route for 404 pages */}
-        <Route path="*" element={<NotFound />} />
+        {/* Catch-all route - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
@@ -157,25 +154,23 @@ const AppContent = () => {
 // Main App Component
 const App = () => {
   return (
-    <ErrorBoundary>
-      <AppProvider>
-        <BrowserRouter>
-          <AppContent />
-          <ToastContainer 
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={true}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
-        </BrowserRouter>
-      </AppProvider>
-    </ErrorBoundary>
+    <AppProvider>
+      <BrowserRouter>
+        <AppContent />
+        <ToastContainer 
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
+      </BrowserRouter>
+    </AppProvider>
   );
 };
 
