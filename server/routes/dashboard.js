@@ -55,12 +55,27 @@ const verifyUser = async (req, res, next) => {
     }
     
     // Find the user in the database
-    const user = await User.findOne({ firebaseUid: uid });
+    let user = await User.findOne({ firebaseUid: uid });
+    
+    // Auto-create user if they don't exist (handles fallback auth scenarios)
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      console.log(`verifyUser: Creating new user with firebaseUid: ${uid}`);
+      user = new User({
+        firebaseUid: uid,
+        email: `user_${uid.substring(0, 8)}@typomaster.app`,
+        name: `Typist_${uid.substring(0, 6)}`,
+        stats: {
+          testsCompleted: 0,
+          avgWpm: 0,
+          avgAccuracy: 0,
+          bestWpm: 0,
+          bestAccuracy: 0,
+          totalTime: 0,
+          totalCharacters: 0
+        }
       });
+      await user.save();
+      console.log(`verifyUser: New user created: ${user._id}`);
     }
     
     // Attach user to request
@@ -196,13 +211,27 @@ router.post('/test-result', async (req, res) => {
       });
     }
     
-    const user = await User.findOne({ firebaseUid: uid });
+    let user = await User.findOne({ firebaseUid: uid });
     
+    // Auto-create user if they don't exist (handles fallback auth scenarios)
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
+      console.log(`Creating new user with firebaseUid: ${uid}`);
+      user = new User({
+        firebaseUid: uid,
+        email: `user_${uid.substring(0, 8)}@typomaster.app`,
+        name: `Typist_${uid.substring(0, 6)}`,
+        stats: {
+          testsCompleted: 0,
+          avgWpm: 0,
+          avgAccuracy: 0,
+          bestWpm: 0,
+          bestAccuracy: 0,
+          totalTime: 0,
+          totalCharacters: 0
+        }
       });
+      await user.save();
+      console.log(`New user created: ${user._id}`);
     }
     
     const { wpm, accuracy, text, duration, errorCount, characters } = req.body;
